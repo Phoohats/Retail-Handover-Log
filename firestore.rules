@@ -15,10 +15,18 @@ service cloud.firestore {
         && request.resource.data.itemPhotos is list
         && request.resource.data.itemPhotos.size() >= 1;
 
-      // แก้/ลบ: ทำได้เฉพาะรายการที่ยัง "ค้างอยู่" (pending)
-      // → รายการ delivered ถูกล็อกจริง แก้ผ่าน Firebase Console เท่านั้น (เฟสแรก)
-      allow update, delete: if request.auth != null
+      // ลบ: ทำได้เฉพาะรายการที่ยัง "ค้างอยู่" (pending)
+      allow delete: if request.auth != null
         && resource.data.status == 'pending';
+
+      // แก้: เฉพาะ pending + ต้องคง invariant (recordedBy + รูปพัสดุ≥1) กันการ strip ฟิลด์บังคับ
+      // หมายเหตุ: merge:true → request.resource.data = เอกสารหลัง merge เต็มใบ (deliver flow จึงผ่าน)
+      allow update: if request.auth != null
+        && resource.data.status == 'pending'
+        && request.resource.data.recordedBy is string
+        && request.resource.data.recordedBy.size() > 0
+        && request.resource.data.itemPhotos is list
+        && request.resource.data.itemPhotos.size() >= 1;
     }
   }
 }

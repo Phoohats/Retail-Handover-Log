@@ -1,0 +1,11 @@
+{
+  "name": "retail-handover-functions",
+  "description": "Cloud Functions for Retail-Handover-Log — ID card handling (PDPA)",
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^5.1.0"
+  },
+  "private": true
+}
