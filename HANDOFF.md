@@ -5,10 +5,11 @@
 
 ## 🔔 UPDATE (2026-07-04) — แยกเป็น repo ใหม่ `Retail-Handover-Log` + วิธีย้ายเครื่อง
 
-### 🆕 การตัดสินใจ: แยกแอปนี้เป็น repo สแตนด์อะโลน
-- แอปรับ-ส่ง (Handover) จะ **แยกออกมาเป็น repo ของตัวเอง ชื่อ `Retail-Handover-Log`** (ไม่อยู่ใน `Retail-MOM-DashBroad` เดิมแล้ว)
-- **Plue จะสร้าง GitHub repo ใหม่ `Retail-Handover-Log` เอง** (ตอนเขียน handoff นี้ยังไม่สร้าง)
-- **โครงสร้าง repo ใหม่ที่ควรจัด** (standalone):
+### 🆕 การตัดสินใจ: แยกแอปนี้เป็น repo สแตนด์อะโลน — ✅ สร้าง + push แล้ว
+- แอปรับ-ส่ง (Handover) **แยกออกมาเป็น repo ของตัวเอง**: **https://github.com/Phoohats/Retail-Handover-Log** (private)
+- ✅ **สร้าง repo + push initial commit ขึ้น GitHub เรียบร้อยแล้ว** (2026-07-04, branch `main`) — เครื่องใหม่ `git clone` ได้เลย
+- 📁 working copy บนเครื่องเดิม: `D:\Repos\Retail-Handover-Log` (นอก OneDrive กัน .git ชน cloud)
+- **โครงสร้าง repo (จัดเสร็จแล้ว)**:
   ```
   Retail-Handover-Log/
   ├─ index.html               ← แอปหลัก (จาก modules/Parcel_Key_Log.html rebuild ใหม่)
@@ -26,11 +27,10 @@
   ```
 - **ผลกับแผน**: decision ที่เขียนว่า "reuse จาก Retail_Dashboard_2025.html" ยังใช้เป็น *reference* ได้ แต่ตอน rebuild ให้ copy โค้ด/สไตล์ที่ต้องใช้เข้ามาใน standalone แทนการ import ข้ามโปรเจกต์. ปุ่มลิงก์กลับ dashboard เดิม = optional (คนละ repo แล้ว)
 
-### ✅ วิธีย้ายเครื่อง = ใช้ Git (แนะนำ)
-- **เครื่องเดิม**: หลังจัดไฟล์เข้า repo `Retail-Handover-Log` แล้ว → commit + push ขึ้น remote ใหม่
-- **เครื่องใหม่**: `git clone https://github.com/Phoohats/Retail-Handover-Log.git` → ได้ครบทันที
+### ✅ วิธีย้ายเครื่อง = ใช้ Git (พร้อมแล้ว)
+- **เครื่องใหม่**: `git clone https://github.com/Phoohats/Retail-Handover-Log.git` → ได้ครบทันที เริ่มทำงานต่อได้เลย
 - งานต่อไป: แก้ → commit → push · อีกเครื่อง → pull
-- **หมายเหตุ**: ไฟล์งานตอนนี้ยังอยู่ใน repo เก่า `Retail-MOM-DashBroad` (path OneDrive) — ต้อง**ย้าย/คัดไฟล์ parcel log เข้า repo ใหม่ก่อน** ตามโครงสร้างด้านบน
+- ต้นฉบับ parcel log เดิมใน `Retail-MOM-DashBroad` (path OneDrive) = คัดมาไว้ที่ repo นี้แล้ว ไม่ต้องไปเอาอีก
 
 ### 🟡 ทางเลือกสำรอง = Google Drive (cloud หลักใหม่ของผู้ใช้)
 - ผู้ใช้ตั้งใจใช้ **Google Drive เป็น cloud หลัก** (แทน OneDrive)
