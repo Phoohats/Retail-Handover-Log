@@ -1,0 +1,24 @@
+rules_version = '2';
+// Retail-Handover-Log — Firestore rules (ADR-001)
+// บังคับผ่าน Firebase Anonymous Auth · ล็อกรายการที่ส่งมอบแล้วจริงที่ server
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /parcelLog/{id} {
+      // อ่าน: ต้องผ่าน auth (แอป sign-in anonymous ให้อัตโนมัติ)
+      allow read: if request.auth != null;
+
+      // สร้าง: ต้องมีผู้บันทึก + รูปพัสดุอย่างน้อย 1 (บังคับระดับ server)
+      allow create: if request.auth != null
+        && request.resource.data.recordedBy is string
+        && request.resource.data.recordedBy.size() > 0
+        && request.resource.data.itemPhotos is list
+        && request.resource.data.itemPhotos.size() >= 1;
+
+      // แก้/ลบ: ทำได้เฉพาะรายการที่ยัง "ค้างอยู่" (pending)
+      // → รายการ delivered ถูกล็อกจริง แก้ผ่าน Firebase Console เท่านั้น (เฟสแรก)
+      allow update, delete: if request.auth != null
+        && resource.data.status == 'pending';
+    }
+  }
+}

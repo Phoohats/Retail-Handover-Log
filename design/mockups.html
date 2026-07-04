@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parcel Log — UI Mockups 6 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&family=Bai+Jamjuree:wght@400;500;600;700&family=Chonburi&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Kanit:wght@300;400;500;600;700;800&family=Mitr:wght@300;400;500;600&family=Noto+Serif+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans Thai',sans-serif;background:#0d1117;color:#e6edf3;padding:0}
+
+/* ===== GALLERY SHELL ===== */
+.gwrap{max-width:1400px;margin:0 auto;padding:36px 24px 80px}
+.ghead{text-align:center;margin-bottom:8px}
+.ghead h1{font-family:'Kanit',sans-serif;font-weight:700;font-size:30px;letter-spacing:-.01em;background:linear-gradient(90deg,#58a6ff,#7ee787);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.ghead p{color:#8b949e;font-size:14px;margin-top:6px}
+.glegend{text-align:center;color:#6e7681;font-size:12.5px;margin:14px auto 34px;max-width:620px;line-height:1.6}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:40px 28px;align-items:start}
+
+.mock{display:flex;flex-direction:column;align-items:center}
+.mock .cap{margin-top:18px;text-align:center;max-width:320px}
+.mock .cap .num{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#0d1117;background:#7ee787;border-radius:6px;padding:2px 9px;margin-bottom:8px}
+.mock .cap h3{font-family:'Kanit',sans-serif;font-weight:600;font-size:17px;color:#e6edf3;margin-bottom:5px}
+.mock .cap .sub{font-size:12px;color:#8b949e;line-height:1.55}
+.mock .cap .fit{font-size:11.5px;color:#7ee787;margin-top:7px}
+.pickbtn{margin-top:12px;font-family:'IBM Plex Sans Thai';font-size:12.5px;font-weight:600;color:#c9d1d9;background:#21262d;border:1px solid #30363d;border-radius:99px;padding:7px 16px;cursor:pointer;transition:.15s}
+.pickbtn:hover{background:#2d333b;border-color:#58a6ff;color:#fff}
+
+/* ===== PHONE FRAME ===== */
+.phone{width:320px;height:640px;border-radius:38px;padding:11px;background:linear-gradient(160deg,#1c2128,#0d1117);box-shadow:0 0 0 2px #30363d,0 24px 60px rgba(0,0,0,.55);position:relative}
+.phone::before{content:'';position:absolute;top:20px;left:50%;transform:translateX(-50%);width:96px;height:22px;background:#0d1117;border-radius:0 0 14px 14px;z-index:20}
+.screen{width:100%;height:100%;border-radius:28px;overflow:hidden;position:relative}
+.scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden}
+.scroll::-webkit-scrollbar{width:0}
+
+/* thumb placeholders */
+.ph{background-size:cover;background-position:center}
+.ph.parcel{background:linear-gradient(135deg,#f59e0b33,#f59e0b11),repeating-linear-gradient(45deg,#00000010 0 6px,#00000000 6px 12px)}
+.ph.key{background:linear-gradient(135deg,#8b5cf633,#8b5cf611)}
+.ph.card{background:linear-gradient(135deg,#06b6d433,#06b6d411)}
+
+/* ================================================================
+   MOCK 1 — LEDGER / สมุดคุมของ  (editorial · kraft · serif · stamp)
+================================================================ */
+.m1 .screen{background:#f4efe4;font-family:'Noto Serif Thai',serif;color:#2b2115}
+.m1 .top{padding:44px 18px 14px;background:#efe7d6;border-bottom:2px solid #2b211540}
+.m1 .brand{display:flex;align-items:baseline;justify-content:space-between}
+.m1 .brand h1{font-size:18px;font-weight:700;letter-spacing:.01em}
+.m1 .brand .stamp{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;color:#a8452a;border:1.5px solid #a8452a;border-radius:4px;padding:2px 6px;transform:rotate(-6deg);opacity:.85}
+.m1 .brand p{font-size:11px;color:#6b5d47;margin-top:2px}
+.m1 .chips{display:flex;gap:6px;padding:12px 18px 6px;flex-wrap:wrap}
+.m1 .chip{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:4px 9px;border:1px solid #2b211540;border-radius:2px;background:#faf6ec;color:#4a3f2d}
+.m1 .chip.on{background:#2b2115;color:#f4efe4;border-color:#2b2115}
+.m1 .list{padding:8px 14px 20px}
+.m1 .row{background:#fbf8f0;border:1px solid #d8cdb5;border-left:4px solid #a8452a;border-radius:2px;padding:12px 13px;margin-bottom:11px;position:relative}
+.m1 .row.out{border-left-color:#4a6b3a}
+.m1 .row.done{opacity:.62}
+.m1 .r1{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.m1 .proj{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8a6d3b}
+.m1 .st{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:1px 6px;border:1px solid;border-radius:2px}
+.m1 .st.wait{color:#a8452a;border-color:#a8452a}
+.m1 .st.ok{color:#4a6b3a;border-color:#4a6b3a}
+.m1 .dir{font-size:12px;font-weight:600}
+.m1 .who{font-size:13px;font-weight:600;margin:3px 0}
+.m1 .items{font-size:11px;color:#6b5d47;border-top:1px dotted #b8a882;padding-top:5px;margin-top:6px}
+.m1 .thumbs{display:flex;gap:4px;margin-top:7px}
+.m1 .thumbs .ph{width:34px;height:24px;border:1px solid #b8a882;border-radius:1px}
+.m1 .fab{position:absolute;bottom:16px;right:16px;background:#2b2115;color:#f4efe4;font-family:'Noto Serif Thai';font-size:12px;font-weight:600;padding:11px 16px;border-radius:2px;box-shadow:3px 3px 0 #a8452a}
+
+/* ================================================================
+   MOCK 2 — ANANDA REFINED  (brand blue evolved · clean · glass-lite)
+================================================================ */
+.m2 .screen{background:#f0f4f9;font-family:'IBM Plex Sans Thai',sans-serif;color:#0f2033}
+.m2 .top{padding:42px 18px 18px;background:linear-gradient(150deg,#1e3a5f,#2563eb);color:#fff;border-radius:0 0 22px 22px}
+.m2 .brand{display:flex;align-items:center;gap:10px}
+.m2 .logo{width:34px;height:34px;background:rgba(255,255,255,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.m2 .brand h1{font-size:16px;font-weight:600}
+.m2 .brand p{font-size:10.5px;opacity:.72;margin-top:1px}
+.m2 .stats{display:flex;gap:8px;margin-top:14px}
+.m2 .stat{flex:1;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:8px 10px}
+.m2 .stat b{font-size:19px;font-weight:700;display:block;line-height:1}
+.m2 .stat span{font-size:9.5px;opacity:.75}
+.m2 .chips{display:flex;gap:6px;padding:14px 16px 4px;flex-wrap:wrap}
+.m2 .chip{font-size:11px;padding:6px 11px;border-radius:99px;background:#fff;border:1px solid #d7e0ec;color:#41546b;font-weight:500}
+.m2 .chip.on{background:#2563eb;color:#fff;border-color:#2563eb}
+.m2 .list{padding:8px 16px 20px}
+.m2 .row{background:#fff;border:1px solid #e2e9f2;border-radius:16px;padding:13px 14px;margin-bottom:11px;box-shadow:0 2px 10px rgba(30,58,95,.05);border-left:4px solid #16a34a}
+.m2 .row.out{border-left-color:#ea580c}
+.m2 .row.done{opacity:.66}
+.m2 .r1{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.m2 .proj{font-size:10px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:.03em}
+.m2 .st{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px}
+.m2 .st.wait{background:#fef9c3;color:#854d0e}
+.m2 .st.ok{background:#dcfce7;color:#16a34a}
+.m2 .tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
+.m2 .tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px}
+.m2 .tag.in{background:#dcfce7;color:#15803d}.m2 .tag.out{background:#ffedd5;color:#c2410c}
+.m2 .tag.ty{background:#eff6ff;color:#0369a1}
+.m2 .who{font-size:13.5px;font-weight:600}
+.m2 .items{font-size:11px;color:#64748b;margin-top:3px}
+.m2 .thumbs{display:flex;gap:5px;margin-top:8px}
+.m2 .thumbs .ph{width:38px;height:26px;border-radius:6px;border:1px solid #e2e9f2}
+.m2 .fab{position:absolute;bottom:18px;right:16px;background:#2563eb;color:#fff;font-size:13px;font-weight:600;padding:12px 18px;border-radius:99px;box-shadow:0 8px 20px rgba(37,99,235,.4)}
+
+/* ================================================================
+   MOCK 3 — FIELD OPS  (industrial dark · amber safety · big targets)
+================================================================ */
+.m3 .screen{background:#15181c;font-family:'Kanit',sans-serif;color:#e8eaed}
+.m3 .top{padding:44px 16px 14px;background:#0c0e11;border-bottom:3px solid #f5a623}
+.m3 .brand{display:flex;align-items:center;justify-content:space-between}
+.m3 .brand h1{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.m3 .brand .live{font-family:'IBM Plex Mono';font-size:9px;color:#f5a623;border:1px solid #f5a62366;border-radius:3px;padding:3px 7px;display:flex;align-items:center;gap:4px}
+.m3 .brand .live::before{content:'';width:6px;height:6px;border-radius:50%;background:#f5a623;box-shadow:0 0 6px #f5a623}
+.m3 .chips{display:flex;gap:7px;padding:13px 14px 6px;flex-wrap:wrap}
+.m3 .chip{font-size:11px;font-weight:500;padding:7px 12px;border-radius:4px;background:#1e2228;border:1px solid #2b3138;color:#9aa4af;text-transform:uppercase}
+.m3 .chip.on{background:#f5a623;color:#15181c;border-color:#f5a623;font-weight:600}
+.m3 .list{padding:8px 14px 20px}
+.m3 .row{background:#1a1e23;border:1px solid #262b31;border-radius:8px;padding:13px;margin-bottom:11px;border-left:5px solid #22c55e}
+.m3 .row.out{border-left-color:#f5a623}
+.m3 .row.done{opacity:.58}
+.m3 .r1{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.m3 .proj{font-size:10px;font-weight:600;color:#f5a623;text-transform:uppercase;letter-spacing:.05em}
+.m3 .st{font-family:'IBM Plex Mono';font-size:9px;font-weight:600;padding:3px 8px;border-radius:3px;text-transform:uppercase}
+.m3 .st.wait{background:#f5a62322;color:#f5a623}
+.m3 .st.ok{background:#22c55e22;color:#22c55e}
+.m3 .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px}
+.m3 .tag{font-size:10px;font-weight:500;padding:3px 8px;border-radius:4px;text-transform:uppercase}
+.m3 .tag.in{background:#22c55e22;color:#4ade80}.m3 .tag.out{background:#f5a62322;color:#fbbf24}
+.m3 .tag.ty{background:#2b3138;color:#c9d1d9}
+.m3 .who{font-size:14px;font-weight:500}
+.m3 .items{font-size:11px;color:#8b949e;margin-top:3px;font-family:'IBM Plex Sans Thai'}
+.m3 .thumbs{display:flex;gap:5px;margin-top:8px}
+.m3 .thumbs .ph{width:40px;height:28px;border-radius:4px;border:1px solid #2b3138}
+.m3 .fab{position:absolute;bottom:16px;left:14px;right:14px;background:#f5a623;color:#15181c;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;padding:15px;border-radius:8px;text-align:center;box-shadow:0 -6px 20px rgba(21,24,28,.6)}
+
+/* ================================================================
+   MOCK 4 — WARM RECEPTION  (soft cream/peach · rounded · friendly)
+================================================================ */
+.m4 .screen{background:#fdf6f0;font-family:'Mitr',sans-serif;color:#4a3b35}
+.m4 .top{padding:44px 20px 16px;background:linear-gradient(160deg,#ffd9c0,#ffc4a3)}
+.m4 .brand h1{font-size:17px;font-weight:500;color:#7a3d1f}
+.m4 .brand p{font-size:11px;color:#9c6b4f;margin-top:2px;font-weight:300}
+.m4 .search{margin-top:12px;background:#fff;border-radius:14px;padding:10px 14px;font-size:12px;color:#b08968;box-shadow:0 4px 12px rgba(255,164,120,.25)}
+.m4 .chips{display:flex;gap:7px;padding:14px 16px 4px;flex-wrap:wrap}
+.m4 .chip{font-size:11px;padding:7px 13px;border-radius:99px;background:#fff;color:#9c6b4f;font-weight:300;box-shadow:0 2px 6px rgba(255,164,120,.18)}
+.m4 .chip.on{background:#ff8f5e;color:#fff}
+.m4 .list{padding:8px 16px 20px}
+.m4 .row{background:#fff;border-radius:20px;padding:14px 15px;margin-bottom:12px;box-shadow:0 4px 16px rgba(255,164,120,.18)}
+.m4 .row.done{opacity:.7}
+.m4 .r1{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.m4 .proj{font-size:10px;font-weight:500;color:#c2681f}
+.m4 .st{font-size:10px;font-weight:400;padding:3px 10px;border-radius:99px}
+.m4 .st.wait{background:#fff1e6;color:#d97b3d}
+.m4 .st.ok{background:#e6f6ea;color:#4a9c62}
+.m4 .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px}
+.m4 .tag{font-size:10px;font-weight:300;padding:3px 10px;border-radius:99px}
+.m4 .tag.in{background:#e6f6ea;color:#4a9c62}.m4 .tag.out{background:#fff1e6;color:#d97b3d}
+.m4 .tag.ty{background:#fdeee3;color:#9c6b4f}
+.m4 .who{font-size:14px;font-weight:500;color:#4a3b35}
+.m4 .items{font-size:11px;color:#9c8578;margin-top:3px;font-weight:300}
+.m4 .thumbs{display:flex;gap:6px;margin-top:9px}
+.m4 .thumbs .ph{width:40px;height:28px;border-radius:9px}
+.m4 .fab{position:absolute;bottom:18px;right:16px;background:#ff8f5e;color:#fff;font-size:13px;font-weight:500;padding:13px 20px;border-radius:99px;box-shadow:0 8px 22px rgba(255,143,94,.45)}
+
+/* ================================================================
+   MOCK 5 — NEO-BRUTALIST  (thick borders · hard shadow · loud)
+================================================================ */
+.m5 .screen{background:#fdf24a;font-family:'Bai Jamjuree',sans-serif;color:#111}
+.m5 .top{padding:42px 16px 14px;background:#111;color:#fdf24a;border-bottom:4px solid #111}
+.m5 .brand h1{font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:-.01em}
+.m5 .brand p{font-size:10px;font-weight:500;opacity:.8;margin-top:2px}
+.m5 .chips{display:flex;gap:7px;padding:13px 14px 6px;flex-wrap:wrap}
+.m5 .chip{font-size:11px;font-weight:600;padding:6px 11px;background:#fff;border:2px solid #111;color:#111;box-shadow:2px 2px 0 #111}
+.m5 .chip.on{background:#111;color:#fdf24a}
+.m5 .list{padding:8px 14px 20px}
+.m5 .row{background:#fff;border:2.5px solid #111;padding:12px 13px;margin-bottom:13px;box-shadow:4px 4px 0 #111}
+.m5 .row.out{background:#c4f5cf}
+.m5 .row.done{background:#e5e5e5;opacity:.85}
+.m5 .r1{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.m5 .proj{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.m5 .st{font-size:9px;font-weight:700;padding:2px 7px;border:2px solid #111;text-transform:uppercase}
+.m5 .st.wait{background:#ff6b3d;color:#fff}
+.m5 .st.ok{background:#22c55e;color:#fff}
+.m5 .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px}
+.m5 .tag{font-size:10px;font-weight:600;padding:2px 8px;border:2px solid #111}
+.m5 .tag.in{background:#22c55e;color:#fff}.m5 .tag.out{background:#ff6b3d;color:#fff}
+.m5 .tag.ty{background:#fdf24a}
+.m5 .who{font-size:14px;font-weight:700}
+.m5 .items{font-size:11px;color:#333;margin-top:3px;font-weight:500}
+.m5 .thumbs{display:flex;gap:6px;margin-top:8px}
+.m5 .thumbs .ph{width:40px;height:28px;border:2px solid #111}
+.m5 .fab{position:absolute;bottom:16px;right:14px;background:#ff6b3d;color:#fff;font-size:13px;font-weight:700;text-transform:uppercase;padding:12px 18px;border:2.5px solid #111;box-shadow:4px 4px 0 #111}
+
+/* ================================================================
+   MOCK 6 — NIGHT GLASS  (dark glassmorphism · neon cyan · night shift)
+================================================================ */
+.m6 .screen{background:radial-gradient(120% 80% at 20% 0%,#12233a,#0a0f18 60%);font-family:'Anuphan',sans-serif;color:#dbe7f5}
+.m6 .top{padding:44px 18px 16px;position:relative}
+.m6 .brand{display:flex;align-items:center;gap:10px}
+.m6 .logo{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#22d3ee,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 18px #22d3ee88}
+.m6 .brand h1{font-size:16px;font-weight:600;color:#f0f7ff}
+.m6 .brand p{font-size:10px;color:#7d93ac;margin-top:1px}
+.m6 .stats{display:flex;gap:8px;margin-top:14px}
+.m6 .stat{flex:1;background:rgba(255,255,255,.05);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:9px 11px}
+.m6 .stat b{font-size:18px;font-weight:700;display:block;line-height:1;color:#22d3ee}
+.m6 .stat span{font-size:9px;color:#7d93ac}
+.m6 .chips{display:flex;gap:6px;padding:14px 16px 4px;flex-wrap:wrap}
+.m6 .chip{font-size:11px;padding:6px 12px;border-radius:99px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#a9bdd4}
+.m6 .chip.on{background:linear-gradient(135deg,#22d3ee,#3b82f6);color:#04121f;font-weight:600;border-color:transparent}
+.m6 .list{padding:8px 16px 20px}
+.m6 .row{background:rgba(255,255,255,.045);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:13px 14px;margin-bottom:11px;border-left:3px solid #22d3ee}
+.m6 .row.out{border-left-color:#fb923c}
+.m6 .row.done{opacity:.55}
+.m6 .r1{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.m6 .proj{font-size:10px;font-weight:600;color:#22d3ee;text-transform:uppercase;letter-spacing:.04em}
+.m6 .st{font-size:9.5px;font-weight:600;padding:2px 9px;border-radius:99px}
+.m6 .st.wait{background:#fb923c22;color:#fb923c}
+.m6 .st.ok{background:#22d3ee22;color:#22d3ee}
+.m6 .tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
+.m6 .tag{font-size:10px;font-weight:500;padding:2px 9px;border-radius:99px}
+.m6 .tag.in{background:#22d3ee1e;color:#67e8f9}.m6 .tag.out{background:#fb923c1e;color:#fdba74}
+.m6 .tag.ty{background:rgba(255,255,255,.07);color:#c3d3e6}
+.m6 .who{font-size:13.5px;font-weight:600;color:#eaf3ff}
+.m6 .items{font-size:11px;color:#8ba0b8;margin-top:3px}
+.m6 .thumbs{display:flex;gap:5px;margin-top:8px}
+.m6 .thumbs .ph{width:38px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,.12)}
+.m6 .fab{position:absolute;bottom:18px;right:16px;background:linear-gradient(135deg,#22d3ee,#3b82f6);color:#04121f;font-size:13px;font-weight:700;padding:12px 18px;border-radius:99px;box-shadow:0 8px 26px #22d3ee55}
+</style>
+</head>
+<body>
+<div class="gwrap">
+  <div class="ghead">
+    <h1>รับ-ส่งพัสดุ / เอกสาร / กุญแจ — UI 6 แบบ</h1>
+    <p>เลือก design direction ที่ชอบ · จอมือถือจริง · ข้อมูลตัวอย่างชุดเดียวกันทุกแบบ</p>
+  </div>
+  <div class="glegend">แต่ละแบบต่างกันที่ ฟอนต์ · สี · รูปทรงการ์ด · โทนอารมณ์ — ดูแล้วบอกผมเลขที่ชอบ (หรือผสม เช่น "เอา 3 แต่สีจาก 2") แล้วผมจะพัฒนาแบบนั้นเต็มรูปแบบให้ตรงกับแผนที่วางไว้</div>
+
+  <div class="grid">
+
+    <!-- ===== MOCK 1 LEDGER ===== -->
+    <div class="mock">
+      <div class="phone m1"><div class="screen"><div class="scroll">
+        <div class="top"><div class="brand"><h1>สมุดคุมรับ-ส่ง</h1><span class="stamp">LOG · 2569</span></div><p>ไอดีโอ เวิร์ฟ ราชปรารภ ▾</p></div>
+        <div class="chips"><span class="chip on">ทั้งหมด</span><span class="chip">รับเข้า</span><span class="chip">ส่งออก</span><span class="chip">ค้างอยู่</span></div>
+        <div class="list">
+          <div class="row"><div class="r1"><span class="proj">IDEO VERVE RATCHAPRAROP</span><span class="st wait">รอ</span></div><div class="dir">⬇ รับเข้า · 📦 พัสดุ</div><div class="who">สมชาย ใจดี · บุคคลภายนอก</div><div class="items">กล่อง Shopee ×3 · จม.ลงทะเบียน ×1</div><div class="thumbs"><span class="ph parcel"></span><span class="ph card"></span></div></div>
+          <div class="row out done"><div class="r1"><span class="proj">SOMERSET RAMA 9</span><span class="st ok">ส่งแล้ว</span></div><div class="dir">⬆ ส่งออก · 🔑 กุญแจ</div><div class="who">ภู (Retail) · พนักงาน</div><div class="items">กุญแจห้องไฟฟ้า ×1 · เซ็นรับแล้ว ✎</div></div>
+          <div class="row"><div class="r1"><span class="proj">ASHTON ASOKE-RAMA 9</span><span class="st wait">รอ</span></div><div class="dir">⬇ รับเข้า · 🎫 บัตรผ่าน</div><div class="who">ผู้รับเหมา · บุคคลภายนอก</div><div class="items">บัตรผ่าน ×2</div><div class="thumbs"><span class="ph card"></span><span class="ph parcel"></span></div></div>
+        </div>
+        <div class="fab">＋ บันทึก</div>
+      </div></div></div>
+      <div class="cap"><span class="num">01</span><h3>Ledger — สมุดคุมของ</h3><div class="sub">โทนกระดาษสมุดบัญชี · ฟอนต์มีหัว (Noto Serif Thai) · ตราประทับ · เลขโมโน</div><div class="fit">✦ เหมาะ: อยากได้ฟีล "หลักฐาน/เอกสารทางการ" น่าเชื่อถือ</div><button class="pickbtn" onclick="pick(1)">เลือกแบบนี้ ›</button></div>
+    </div>
+
+    <!-- ===== MOCK 2 ANANDA REFINED ===== -->
+    <div class="mock">
+      <div class="phone m2"><div class="screen"><div class="scroll">
+        <div class="top"><div class="brand"><div class="logo">📦</div><div><h1>รับ-ส่งพัสดุ/กุญแจ</h1><p>Ananda Retail · ทุกโครงการ</p></div></div>
+          <div class="stats"><div class="stat"><b>12</b><span>ค้างอยู่</span></div><div class="stat"><b>8</b><span>รับเข้า</span></div><div class="stat"><b>5</b><span>ส่งออก</span></div></div></div>
+        <div class="chips"><span class="chip on">ทั้งหมด</span><span class="chip">รับเข้า</span><span class="chip">ส่งออก</span><span class="chip">ค้างอยู่</span></div>
+        <div class="list">
+          <div class="row"><div class="r1"><span class="proj">IDEO Verve Ratchaprarop</span><span class="st wait">ค้างอยู่</span></div><div class="tags"><span class="tag in">⬇ รับเข้า</span><span class="tag ty">📦 พัสดุ</span></div><div class="who">สมชาย ใจดี <span style="color:#94a3b8;font-weight:400">· บุคคลภายนอก</span></div><div class="items">กล่อง Shopee ×3 · จม.ลงทะเบียน ×1</div><div class="thumbs"><span class="ph parcel"></span><span class="ph card"></span></div></div>
+          <div class="row out done"><div class="r1"><span class="proj">Somerset Rama 9</span><span class="st ok">ส่งมอบแล้ว</span></div><div class="tags"><span class="tag out">⬆ ส่งออก</span><span class="tag ty">🔑 กุญแจ</span></div><div class="who">ภู ทองดี <span style="color:#94a3b8;font-weight:400">· Retail</span></div><div class="items">กุญแจห้องไฟฟ้า ×1 · ✎ เซ็นรับแล้ว</div></div>
+          <div class="row"><div class="r1"><span class="proj">Ashton Asoke-Rama 9</span><span class="st wait">ค้างอยู่</span></div><div class="tags"><span class="tag in">⬇ รับเข้า</span><span class="tag ty">🎫 บัตรผ่าน</span></div><div class="who">ผู้รับเหมา <span style="color:#94a3b8;font-weight:400">· ภายนอก</span></div><div class="items">บัตรผ่านเข้า-ออก ×2</div><div class="thumbs"><span class="ph card"></span></div></div>
+        </div>
+        <div class="fab">＋ บันทึก</div>
+      </div></div></div>
+      <div class="cap"><span class="num">02</span><h3>Ananda Refined</h3><div class="sub">ต่อยอดแบรนด์น้ำเงินเดิมให้เนี้ยบขึ้น · การ์ดสะอาด · IBM Plex Sans Thai · มี KPI ด้านบน</div><div class="fit">✦ เหมาะ: อยากกลมกลืนกับ dashboard เดิม ดูเป็นทางการ</div><button class="pickbtn" onclick="pick(2)">เลือกแบบนี้ ›</button></div>
+    </div>
+
+    <!-- ===== MOCK 3 FIELD OPS ===== -->
+    <div class="mock">
+      <div class="phone m3"><div class="screen"><div class="scroll">
+        <div class="top"><div class="brand"><h1>PARCEL LOG</h1><span class="live">LIVE</span></div></div>
+        <div class="chips"><span class="chip on">ALL</span><span class="chip">รับเข้า</span><span class="chip">ส่งออก</span><span class="chip">ค้าง</span></div>
+        <div class="list">
+          <div class="row"><div class="r1"><span class="proj">IDEO VERVE RATCHAPRAROP</span><span class="st wait">รอรับ</span></div><div class="tags"><span class="tag in">⬇ IN</span><span class="tag ty">พัสดุ</span></div><div class="who">สมชาย ใจดี · ภายนอก</div><div class="items">กล่อง Shopee ×3 · จม. ×1</div><div class="thumbs"><span class="ph parcel"></span><span class="ph card"></span></div></div>
+          <div class="row out done"><div class="r1"><span class="proj">SOMERSET RAMA 9</span><span class="st ok">DONE</span></div><div class="tags"><span class="tag out">⬆ OUT</span><span class="tag ty">กุญแจ</span></div><div class="who">ภู · Retail</div><div class="items">กุญแจห้องไฟฟ้า ×1 · เซ็นแล้ว</div></div>
+          <div class="row"><div class="r1"><span class="proj">ASHTON ASOKE-RAMA 9</span><span class="st wait">รอรับ</span></div><div class="tags"><span class="tag in">⬇ IN</span><span class="tag ty">บัตรผ่าน</span></div><div class="who">ผู้รับเหมา · ภายนอก</div><div class="items">บัตรผ่าน ×2</div><div class="thumbs"><span class="ph card"></span></div></div>
+        </div>
+        <div class="fab">＋ บันทึกรายการ</div>
+      </div></div></div>
+      <div class="cap"><span class="num">03</span><h3>Field Ops — ชุดปฏิบัติงาน</h3><div class="sub">ดำ industrial · สีเหลืองเซฟตี้ · ปุ่มใหญ่กดง่าย · Kanit ตัวหนา · ปุ่มบันทึกเต็มความกว้าง</div><div class="fit">✦ เหมาะ: รปภ.กดหน้างานเร็วๆ กลางแดด/ที่จอดรถ อ่านชัด</div><button class="pickbtn" onclick="pick(3)">เลือกแบบนี้ ›</button></div>
+    </div>
+
+    <!-- ===== MOCK 4 WARM ===== -->
+    <div class="mock">
+      <div class="phone m4"><div class="screen"><div class="scroll">
+        <div class="top"><div class="brand"><h1>รับ-ส่งของ 🧡</h1><p>บันทึกง่าย ๆ ทุกโครงการ</p></div><div class="search">🔍 ค้นหาชื่อ / รายการของ…</div></div>
+        <div class="chips"><span class="chip on">ทั้งหมด</span><span class="chip">รับเข้า</span><span class="chip">ส่งออก</span><span class="chip">ค้างอยู่</span></div>
+        <div class="list">
+          <div class="row"><div class="r1"><span class="proj">Ideo Verve Ratchaprarop</span><span class="st wait">ค้างอยู่</span></div><div class="tags"><span class="tag in">⬇ รับเข้า</span><span class="tag ty">📦 พัสดุ</span></div><div class="who">สมชาย ใจดี</div><div class="items">กล่อง Shopee ×3 · จม. ×1</div><div class="thumbs"><span class="ph parcel"></span><span class="ph card"></span></div></div>
+          <div class="row done"><div class="r1"><span class="proj">Somerset Rama 9</span><span class="st ok">ส่งมอบแล้ว</span></div><div class="tags"><span class="tag out">⬆ ส่งออก</span><span class="tag ty">🔑 กุญแจ</span></div><div class="who">ภู ทองดี</div><div class="items">กุญแจห้องไฟฟ้า ×1 · เซ็นแล้ว 🧡</div></div>
+          <div class="row"><div class="r1"><span class="proj">Ashton Asoke-Rama 9</span><span class="st wait">ค้างอยู่</span></div><div class="tags"><span class="tag in">⬇ รับเข้า</span><span class="tag ty">🎫 บัตรผ่าน</span></div><div class="who">ผู้รับเหมา</div><div class="items">บัตรผ่านเข้า-ออก ×2</div><div class="thumbs"><span class="ph card"></span></div></div>
+        </div>
+        <div class="fab">＋ บันทึก</div>
+      </div></div></div>
+      <div class="cap"><span class="num">04</span><h3>Warm Reception — อบอุ่น</h3><div class="sub">โทนครีม-พีช นุ่ม · มุมโค้งมน · Mitr เป็นมิตร · เงานุ่ม</div><div class="fit">✦ เหมาะ: อยากให้ดูเข้าถึงง่าย ไม่น่ากลัวสำหรับคนไม่คล่องเทค</div><button class="pickbtn" onclick="pick(4)">เลือกแบบนี้ ›</button></div>
+    </div>
+
+    <!-- ===== MOCK 5 BRUTALIST ===== -->
+    <div class="mock">
+      <div class="phone m5"><div class="screen"><div class="scroll">
+        <div class="top"><div class="brand"><h1>PARCEL LOG.</h1><p>รับ-ส่ง พัสดุ / เอกสาร / กุญแจ</p></div></div>
+        <div class="chips"><span class="chip on">ทั้งหมด</span><span class="chip">รับเข้า</span><span class="chip">ส่งออก</span><span class="chip">ค้าง</span></div>
+        <div class="list">
+          <div class="row"><div class="r1"><span class="proj">IDEO VERVE</span><span class="st wait">รอ</span></div><div class="tags"><span class="tag in">⬇ รับเข้า</span><span class="tag ty">📦 พัสดุ</span></div><div class="who">สมชาย ใจดี</div><div class="items">กล่อง Shopee ×3 · จม. ×1</div><div class="thumbs"><span class="ph parcel"></span><span class="ph card"></span></div></div>
+          <div class="row out"><div class="r1"><span class="proj">SOMERSET R9</span><span class="st ok">ส่งแล้ว</span></div><div class="tags"><span class="tag out">⬆ ส่งออก</span><span class="tag ty">🔑 กุญแจ</span></div><div class="who">ภู ทองดี</div><div class="items">กุญแจห้องไฟฟ้า ×1 · เซ็นแล้ว</div></div>
+          <div class="row"><div class="r1"><span class="proj">ASHTON R9</span><span class="st wait">รอ</span></div><div class="tags"><span class="tag in">⬇ รับเข้า</span><span class="tag ty">🎫 บัตร</span></div><div class="who">ผู้รับเหมา</div><div class="items">บัตรผ่าน ×2</div><div class="thumbs"><span class="ph card"></span></div></div>
+        </div>
+        <div class="fab">＋ บันทึก</div>
+      </div></div></div>
+      <div class="cap"><span class="num">05</span><h3>Neo-Brutalist — ทึบหนา</h3><div class="sub">เส้นขอบหนา · เงาแข็ง · เหลืองจัด · Bai Jamjuree · ปุ่ม/ป้ายเด่นชัด กดไม่พลาด</div><div class="fit">✦ เหมาะ: อยากได้อะไรจำง่าย ป้าย/ปุ่มชัดสุด ๆ ไม่สับสน</div><button class="pickbtn" onclick="pick(5)">เลือกแบบนี้ ›</button></div>
+    </div>
+
+    <!-- ===== MOCK 6 NIGHT GLASS ===== -->
+    <div class="mock">
+      <div class="phone m6"><div class="screen"><div class="scroll">
+        <div class="top"><div class="brand"><div class="logo">📦</div><div><h1>Parcel & Key Log</h1><p>กะกลางคืน · ทุกโครงการ</p></div></div>
+          <div class="stats"><div class="stat"><b>12</b><span>ค้างอยู่</span></div><div class="stat"><b>8</b><span>รับเข้า</span></div><div class="stat"><b>5</b><span>ส่งออก</span></div></div></div>
+        <div class="chips"><span class="chip on">ทั้งหมด</span><span class="chip">รับเข้า</span><span class="chip">ส่งออก</span><span class="chip">ค้างอยู่</span></div>
+        <div class="list">
+          <div class="row"><div class="r1"><span class="proj">IDEO Verve Ratchaprarop</span><span class="st wait">ค้างอยู่</span></div><div class="tags"><span class="tag in">⬇ รับเข้า</span><span class="tag ty">📦 พัสดุ</span></div><div class="who">สมชาย ใจดี · ภายนอก</div><div class="items">กล่อง Shopee ×3 · จม. ×1</div><div class="thumbs"><span class="ph parcel"></span><span class="ph card"></span></div></div>
+          <div class="row out done"><div class="r1"><span class="proj">Somerset Rama 9</span><span class="st ok">ส่งมอบแล้ว</span></div><div class="tags"><span class="tag out">⬆ ส่งออก</span><span class="tag ty">🔑 กุญแจ</span></div><div class="who">ภู ทองดี · Retail</div><div class="items">กุญแจห้องไฟฟ้า ×1 · ✎ เซ็นแล้ว</div></div>
+          <div class="row"><div class="r1"><span class="proj">Ashton Asoke-Rama 9</span><span class="st wait">ค้างอยู่</span></div><div class="tags"><span class="tag in">⬇ รับเข้า</span><span class="tag ty">🎫 บัตรผ่าน</span></div><div class="who">ผู้รับเหมา · ภายนอก</div><div class="items">บัตรผ่านเข้า-ออก ×2</div><div class="thumbs"><span class="ph card"></span></div></div>
+        </div>
+        <div class="fab">＋ บันทึก</div>
+      </div></div></div>
+      <div class="cap"><span class="num">06</span><h3>Night Glass — กะดึก</h3><div class="sub">ดำ glassmorphism · นีออนฟ้า · Anuphan · เหมาะแสงน้อย ถนอมสายตา</div><div class="fit">✦ เหมาะ: โต๊ะ รปภ./เคาน์เตอร์กลางคืน แสงน้อย</div><button class="pickbtn" onclick="pick(6)">เลือกแบบนี้ ›</button></div>
+    </div>
+
+  </div>
+</div>
+<script>
+function pick(n){
+  const names={1:'Ledger สมุดคุมของ',2:'Ananda Refined',3:'Field Ops',4:'Warm Reception',5:'Neo-Brutalist',6:'Night Glass'};
+  alert('เลือกแบบ '+n+' — '+names[n]+'\n\nบอก Claude ในแชทว่า "เอาแบบ '+n+'" แล้วผมจะพัฒนา UI เต็มรูปแบบตามแผนให้ครับ');
+}
+</script>
+</body>
+</html>

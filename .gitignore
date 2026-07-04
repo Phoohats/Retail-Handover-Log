@@ -1,0 +1,21 @@
+# OS / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+*~
+*.tmp
+
+# Firebase
+.firebase/
+firebase-debug.log
+*-debug.log
+
+# Secrets — อย่า commit config จริง/คีย์
+# (ใส่ Firebase config ใน index.html โดยตรง แต่ถ้าแยกไฟล์ลับ ให้ ignore ที่นี่)
+secrets.js
+config.local.js
+.env
+.env.*
+
+# Node (เผื่ออนาคตมี tooling)
+node_modules/
