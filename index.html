@@ -1,768 +1,892 @@
 <!-- ================================================================
+  Retail-Handover-Log · รับ-ส่ง พัสดุ / เอกสาร / กุญแจ
   CHANGELOG
-  v1.0 | 2026-07-02 | Initial build — Parcel / Document / Key receiving log
-       รับ-ส่ง พัสดุ / เอกสาร / กุญแจ ระหว่างโครงการ
-       + Filter รายโครงการ, ทิศทาง (รับเข้า/ส่งออก), ประเภท, สถานะ
-       + บุคคลภายใน (ชื่อ-นามสกุล/เบอร์/แผนก) vs บุคคลภายนอก (แนบรูปบัตร ปชช.)
-       + รายการของ (item + จำนวน) แบบ dynamic list
-       + Firebase Firestore (multi-device sync) + localStorage fallback
+  v2.0 | 2026-07-04 | Full rebuild ตาม 16 decisions + ADR-001 + chosen.html
+       + Passcode gate + Firebase Anonymous Auth (silent)
+       + Firebase Storage สำหรับรูป (fallback base64 เมื่อยังไม่ตั้ง config)
+       + occurredAt (แก้ย้อนหลังได้) · รูปพัสดุ required · รูปบัตร (external) required
+       + Filter ช่วงวันที่ + sort + ปุ่มด่วน · Bottom Nav 5 ช่อง
+       + Deliver flow + ล็อก delivered · Export Excel + PDF (print) 2 แบบ
+       + UI Warm (ครีม-พีช, Mitr/Kanit, ปุ่มใหญ่ ≥56px)
+       ⏸️ Signature pad = STUB (รอโค้ดจาก Retail-Inspection-APP · decision 13)
+  v1.0 | 2026-07-02 | Initial build (ดีไซน์เก่า) — เก็บใน versions/
 ================================================================ -->
 <!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>รับ-ส่งพัสดุ / เอกสาร / กุญแจ — Retail Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<title>รับ-ส่งของ · Handover Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&family=Kanit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Sarabun',sans-serif;background:#f1f5f9;color:#1e293b;font-size:14px}
-:root{--blue:#2563eb;--green:#16a34a;--red:#dc2626;--orange:#ea580c;--yellow:#ca8a04;--purple:#7c3aed;--gray:#64748b;--surface:#fff;--border:#e2e8f0;--hover:#f8fafc;--touch-min:44px}
+:root{
+  --cream:#fdf6f0; --peach1:#ffd9c0; --peach2:#ffc4a3;
+  --accent:#ff8f5e; --accent-d:#f2703a;
+  --ink:#4a3b35; --muted:#9c8578; --brown:#7a3d1f;
+  --green:#4a9c62; --green-bg:#e6f6ea; --wait:#d97b3d; --wait-bg:#fff1e6;
+  --red:#d9534f; --line:#f0d9c8;
+  --touch:56px;
+}
+html,body{height:100%}
+body{font-family:'Mitr',sans-serif;background:#efe6dd;color:var(--ink);font-size:14px;-webkit-tap-highlight-color:transparent}
+.app{max-width:640px;margin:0 auto;background:var(--cream);min-height:100vh;position:relative;box-shadow:0 0 40px rgba(122,61,31,.12);padding-bottom:96px}
+button,input,select,textarea{font-family:inherit}
+h1,h2,h3{font-family:'Kanit',sans-serif;font-weight:600}
 
-/* HEADER */
-.header{background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);color:#fff;padding:18px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(37,99,235,.3);flex-wrap:wrap;gap:10px}
-.header-title{display:flex;align-items:center;gap:12px}
-.header-title h1{font-size:19px;font-weight:700;letter-spacing:-.01em}
-.header-title p{font-size:12px;opacity:.7;margin-top:2px}
-.header-logo{width:42px;height:42px;background:rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px}
-.header-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;font-family:inherit;text-decoration:none}
-.btn-primary{background:#fff;color:#2563eb}
-.btn-primary:hover{background:#eff6ff}
-.btn-outline{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3)}
-.btn-outline:hover{background:rgba(255,255,255,.25)}
+/* ===== PASSCODE GATE ===== */
+.gate{position:fixed;inset:0;z-index:500;background:linear-gradient(160deg,var(--peach1),var(--peach2));display:flex;align-items:center;justify-content:center;padding:24px}
+.gate-box{background:#fff;border-radius:26px;padding:32px 26px;width:100%;max-width:360px;text-align:center;box-shadow:0 20px 50px rgba(122,61,31,.25)}
+.gate-box .logo{font-size:44px}
+.gate-box h1{font-size:22px;color:var(--brown);margin:10px 0 4px}
+.gate-box p{font-size:12.5px;color:var(--muted);font-weight:300;margin-bottom:22px}
+.gate-box input{width:100%;min-height:var(--touch);border:2px solid var(--line);border-radius:16px;text-align:center;font-size:20px;letter-spacing:6px;color:var(--brown);outline:none;margin-bottom:14px}
+.gate-box input:focus{border-color:var(--accent)}
+.gate-box button{width:100%;min-height:var(--touch);border:none;border-radius:16px;background:linear-gradient(150deg,var(--accent),var(--accent-d));color:#fff;font-size:16px;font-weight:500;box-shadow:0 8px 20px rgba(255,143,94,.4)}
+.gate-err{color:var(--red);font-size:12px;min-height:16px;margin-bottom:8px;font-weight:300}
 
-/* LAYOUT */
-.main{padding:20px 28px;max-width:1400px;margin:0 auto}
-@media(max-width:768px){.main{padding:12px 14px 84px}.header{padding:14px 18px}}
+/* ===== HEADER ===== */
+.top{padding:22px 20px 16px;background:linear-gradient(160deg,var(--peach1),var(--peach2))}
+.top-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.top h1{font-size:19px;color:var(--brown)}
+.top p{font-size:11.5px;color:#9c6b4f;margin-top:2px;font-weight:300}
+.sync{font-size:10px;font-weight:300;padding:5px 10px;border-radius:99px;white-space:nowrap;display:flex;align-items:center;gap:4px}
+.sync.on{background:var(--green-bg);color:var(--green)}
+.sync.off{background:var(--wait-bg);color:var(--wait)}
+.proj-pick{margin-top:14px;background:#fff;border-radius:15px;padding:0 8px;display:flex;align-items:center;box-shadow:0 4px 14px rgba(255,164,120,.28)}
+.proj-pick span{padding:0 6px;color:var(--accent-d)}
+.proj-pick select{flex:1;border:none;background:transparent;min-height:48px;font-size:14px;color:var(--brown);outline:none;font-family:inherit}
 
-/* SYNC BANNER */
-.sync-banner{font-size:12px;padding:8px 14px;border-radius:8px;margin-bottom:14px;display:flex;align-items:center;gap:6px;font-weight:600}
-.sync-on{background:#dcfce7;color:#15803d}
-.sync-off{background:#fef9c3;color:#854d0e}
+/* ===== FILTER CHIPS ===== */
+.chips{display:flex;gap:8px;padding:14px 16px 4px;flex-wrap:wrap}
+.chip{font-size:12px;padding:9px 15px;border-radius:99px;background:#fff;color:#9c6b4f;font-weight:300;box-shadow:0 2px 7px rgba(255,164,120,.16);min-height:38px;display:flex;align-items:center;cursor:pointer;border:none}
+.chip.on{background:var(--accent);color:#fff;font-weight:400}
+.adv-toggle{font-size:12px;color:var(--accent-d);padding:9px 12px;cursor:pointer;font-weight:400;background:none;border:none;min-height:38px}
+.adv{padding:6px 16px 4px;display:none;flex-wrap:wrap;gap:10px}
+.adv.open{display:flex}
+.adv .fg{display:flex;flex-direction:column;gap:3px;flex:1;min-width:130px}
+.adv .fg label{font-size:10.5px;color:var(--muted);font-weight:300;padding-left:4px}
+.adv .fg select,.adv .fg input{min-height:42px;border:1.5px solid var(--line);border-radius:12px;padding:6px 10px;font-size:13px;background:#fff;color:var(--brown);outline:none}
+.adv .fg select:focus,.adv .fg input:focus{border-color:var(--accent)}
+.adv-clear{align-self:flex-end;font-size:12px;color:var(--red);background:none;border:none;cursor:pointer;padding:10px 4px;font-weight:300}
 
-/* KPI */
-.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
-.kpi-card{background:#fff;border-radius:12px;padding:14px 18px;border:1px solid #e2e8f0;position:relative;overflow:hidden}
-.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0}
-.kpi-card.blue::before{background:var(--blue)}
-.kpi-card.orange::before{background:var(--orange)}
-.kpi-card.green::before{background:var(--green)}
-.kpi-card.purple::before{background:var(--purple)}
-.kpi-label{font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
-.kpi-val{font-size:26px;font-weight:800;line-height:1}
-@media(max-width:768px){.kpi-grid{grid-template-columns:1fr 1fr}}
+/* ===== STAT LINE ===== */
+.statline{display:flex;gap:8px;padding:10px 16px 2px;font-size:11.5px;color:var(--muted);font-weight:300}
+.statline b{color:var(--brown);font-weight:500}
 
-/* FILTERS */
-.filters{background:#fff;border-radius:12px;padding:14px 18px;border:1px solid #e2e8f0;margin-bottom:16px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
-.filter-group{display:flex;flex-direction:column;gap:4px;min-width:140px}
-.filter-group label{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em}
-.filter-group select,.filter-group input{padding:7px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;background:#f8fafc;font-family:inherit;color:#1e293b;outline:none;min-height:var(--touch-min)}
-.filter-group select:focus,.filter-group input:focus{border-color:#2563eb;background:#fff}
-.search-wrap{flex:1;min-width:180px}
-.filter-clear{font-size:12px;color:#2563eb;cursor:pointer;font-weight:600;white-space:nowrap;align-self:center}
-.filter-clear:hover{text-decoration:underline}
+/* ===== LIST ===== */
+.list{padding:8px 16px 16px}
+.card{background:#fff;border-radius:22px;padding:15px 16px;margin-bottom:13px;box-shadow:0 5px 18px rgba(255,164,120,.18);cursor:pointer}
+.card.done{opacity:.74}
+.c1{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;gap:8px}
+.proj{font-size:10.5px;font-weight:500;color:#c2681f;text-transform:uppercase;letter-spacing:.02em}
+.st{font-size:10.5px;font-weight:400;padding:4px 11px;border-radius:99px;white-space:nowrap}
+.st.wait{background:var(--wait-bg);color:var(--wait)}
+.st.ok{background:var(--green-bg);color:var(--green)}
+.st.lock::after{content:' 🔒'}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.tag{font-size:10.5px;font-weight:300;padding:4px 11px;border-radius:99px}
+.tag.in{background:var(--green-bg);color:var(--green)}
+.tag.out{background:var(--wait-bg);color:var(--wait)}
+.tag.ty{background:#fdeee3;color:#9c6b4f}
+.tag.pn{background:#f3ecff;color:#7c5bbf}
+.who{font-size:14.5px;font-weight:500}
+.items{font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:300;line-height:1.5}
+.meta{font-size:10.5px;color:var(--muted);font-weight:300;margin-top:6px}
+.thumbs{display:flex;gap:7px;margin-top:10px}
+.thumbs img{width:46px;height:33px;border-radius:9px;object-fit:cover;border:1px solid var(--line)}
+.card .deliver{margin-top:12px;width:100%;min-height:var(--touch);border:none;border-radius:16px;background:var(--green);color:#fff;font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 6px 16px rgba(74,156,98,.32);cursor:pointer}
+.card .row-btns{display:flex;gap:8px;margin-top:10px}
+.card .row-btns button{flex:1;min-height:44px;border-radius:13px;border:1.5px solid var(--line);background:#fff;color:var(--muted);font-size:12.5px;font-weight:300;cursor:pointer}
+.card .row-btns .del{color:var(--red);border-color:#f2c9c7}
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty .e{font-size:46px}
+.empty p{font-size:15px;margin-top:8px;font-weight:300}
 
-/* LIST */
-.list-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.list-header h3{font-size:13px;font-weight:700;color:#374151}
-.list-count{font-size:12px;color:#94a3b8}
-.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
-.log-card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:14px 16px;cursor:pointer;border-left:3px solid transparent;transition:box-shadow .15s}
-.log-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
-.log-card.dir-in{border-left-color:#16a34a}
-.log-card.dir-out{border-left-color:#ea580c}
-.log-card.st-delivered{opacity:.72}
-.lc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px}
-.lc-project{font-size:11px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:.03em}
-.lc-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
-.chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap}
-.chip-dir-in{background:#dcfce7;color:#15803d}
-.chip-dir-out{background:#ffedd5;color:#c2410c}
-.chip-type{background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd}
-.chip-status-pending{background:#fef9c3;color:#854d0e}
-.chip-status-delivered{background:#dcfce7;color:#16a34a}
-.chip-person{background:#faf5ff;color:#7e22ce}
-.lc-person{font-size:13px;font-weight:600;color:#1e293b;margin-bottom:4px}
-.lc-items{font-size:12px;color:#64748b;line-height:1.4;margin-bottom:8px;max-height:38px;overflow:hidden;text-overflow:ellipsis}
-.lc-foot{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#94a3b8}
-.lc-idthumb{width:32px;height:22px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;vertical-align:middle;margin-right:4px}
-.lc-actions{display:flex;gap:6px;margin-top:8px}
-.action-btn{padding:5px 10px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit}
-.btn-deliver{background:#dcfce7;color:#16a34a}
-.btn-deliver:hover{background:#bbf7d0}
-.btn-edit{background:#eff6ff;color:#2563eb}
-.btn-edit:hover{background:#dbeafe}
-.btn-delete{background:#fff;color:#94a3b8;border:1px solid #e2e8f0}
-.btn-delete:hover{background:#fef2f2;color:#dc2626;border-color:#fca5a5}
+/* ===== BOTTOM NAV ===== */
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:640px;height:82px;background:#fff;border-top:1px solid #f2e0d3;border-radius:24px 24px 0 0;display:flex;align-items:flex-start;padding:9px 8px;box-shadow:0 -6px 24px rgba(122,61,31,.10);z-index:80}
+.nav .item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--muted);font-weight:300;padding-top:6px;background:none;border:none;cursor:pointer}
+.nav .item .ic{font-size:20px;line-height:1}
+.nav .item.on{color:var(--accent);font-weight:400}
+.nav .add{flex:0 0 auto;margin:0 6px;transform:translateY(-22px);display:flex;flex-direction:column;align-items:center;background:none;border:none;cursor:pointer}
+.nav .add .btn{width:62px;height:62px;border-radius:50%;background:linear-gradient(150deg,var(--accent),var(--accent-d));color:#fff;font-size:30px;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 24px rgba(255,143,94,.5);border:4px solid var(--cream)}
+.nav .add .txt{font-size:10px;color:var(--accent);margin-top:2px;font-weight:400}
 
-.no-data{text-align:center;padding:60px 20px;color:#94a3b8}
-.no-data p{font-size:16px;margin-bottom:6px}
-.no-data span{font-size:13px}
+/* ===== MODAL / SHEET ===== */
+.sheet{position:fixed;inset:0;z-index:200;background:rgba(74,59,53,.4);display:none;align-items:flex-end;justify-content:center}
+.sheet.open{display:flex}
+.sheet-box{background:var(--cream);width:100%;max-width:640px;max-height:94vh;border-radius:26px 26px 0 0;overflow:hidden;display:flex;flex-direction:column;animation:slideUp .22s ease}
+@keyframes slideUp{from{transform:translateY(30px);opacity:.6}to{transform:translateY(0);opacity:1}}
+.sheet-head{padding:18px 18px 14px;background:linear-gradient(160deg,var(--peach1),var(--peach2));display:flex;align-items:center;gap:12px;flex-shrink:0}
+.sheet-head .back{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--brown);border:none;cursor:pointer}
+.sheet-head h2{font-size:16px;color:var(--brown)}
+.sheet-body{padding:16px 18px;overflow-y:auto;flex:1}
+.flabel{font-size:12.5px;font-weight:400;color:var(--brown);margin:16px 2px 8px;display:block}
+.flabel:first-child{margin-top:2px}
+.flabel .req{color:var(--accent-d)}
+.finput{width:100%;min-height:48px;border:1.5px solid var(--line);border-radius:14px;padding:10px 13px;font-size:14px;background:#fff;color:var(--ink);outline:none}
+.finput:focus{border-color:var(--accent)}
+textarea.finput{min-height:64px;resize:vertical}
 
-/* MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px);overflow-y:auto}
-.modal-box{background:#fff;border-radius:16px;width:100%;max-width:620px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2);margin:auto}
-.modal-head{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:18px 22px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0}
-.modal-head h3{font-size:16px;font-weight:700}
-.modal-close{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;opacity:.7;line-height:1}
-.modal-close:hover{opacity:1}
-.modal-body{padding:22px;display:grid;grid-template-columns:1fr 1fr;gap:14px;max-height:70vh;overflow-y:auto}
-.form-group{display:flex;flex-direction:column;gap:5px}
-.form-group.full{grid-column:1/-1}
-.form-group label{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em}
-.form-group input,.form-group select,.form-group textarea{padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;color:#1e293b;min-height:var(--touch-min)}
-.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#2563eb}
-.form-group textarea{resize:vertical;min-height:64px}
-.req::after{content:' *';color:#dc2626}
+.seg{display:flex;gap:10px}
+.seg button{flex:1;min-height:var(--touch);border:2px solid var(--line);border-radius:16px;background:#fff;font-size:15px;font-weight:400;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.seg button.on-in{border-color:var(--green);background:var(--green-bg);color:var(--green)}
+.seg button.on-out{border-color:var(--accent);background:var(--wait-bg);color:var(--accent-d)}
+.types{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.types button{min-height:56px;border:2px solid var(--line);border-radius:15px;background:#fff;font-size:12px;font-weight:300;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer}
+.types button .e{font-size:19px}
+.types button.on{border-color:var(--accent);background:var(--wait-bg);color:var(--accent-d);font-weight:400}
+.ptoggle{display:flex;gap:10px}
+.ptoggle button{flex:1;min-height:52px;border:2px solid var(--line);border-radius:15px;background:#fff;font-size:13px;font-weight:300;color:var(--muted);cursor:pointer}
+.ptoggle button.on{border-color:var(--accent);background:var(--wait-bg);color:var(--accent-d);font-weight:400}
+.pdpa{font-size:11px;color:#9c6b4f;background:#fff6ef;border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-top:8px;font-weight:300;line-height:1.5}
 
-.radio-row{display:flex;gap:10px;flex-wrap:wrap}
-.radio-pill{flex:1;min-width:110px}
-.radio-pill input{position:absolute;opacity:0;width:0;height:0}
-.radio-pill label{display:flex;align-items:center;justify-content:center;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;transition:all .15s;text-align:center;min-height:var(--touch-min)}
-.radio-pill input:checked+label{border-color:#2563eb;background:#eff6ff;color:#2563eb}
-.radio-pill.dir-in input:checked+label{border-color:#16a34a;background:#f0fdf4;color:#15803d}
-.radio-pill.dir-out input:checked+label{border-color:#ea580c;background:#fff7ed;color:#c2410c}
-
-.modal-section{margin:0 22px 14px;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#f8fafc}
-.modal-sec-title{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;gap:6px;justify-content:space-between}
+/* PHOTO */
+.cam{margin-top:2px;min-height:92px;border:2px dashed #e9c4ab;border-radius:18px;background:#fffaf6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#c2681f;cursor:pointer}
+.cam .e{font-size:28px}
+.cam .t{font-size:12.5px;font-weight:300}
+.cam .r{font-size:10px;color:var(--muted)}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.pthumb{position:relative;aspect-ratio:1.4;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.pthumb img{width:100%;height:100%;object-fit:cover}
+.pthumb .x{position:absolute;top:4px;right:4px;background:rgba(74,59,53,.7);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 
 /* ITEM ROWS */
-.item-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
-.item-row input{flex:1;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;min-height:40px}
-.item-row input.qty{flex:0 0 70px;text-align:center}
-.item-row button{background:#fff;color:#dc2626;border:1px solid #e2e8f0;border-radius:6px;width:36px;height:36px;cursor:pointer;font-size:14px;flex-shrink:0}
-.item-row button:hover{background:#fef2f2}
-.item-add-btn{padding:8px 14px;background:#eff6ff;color:#2563eb;border:1px dashed #93c5fd;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;width:100%;margin-top:4px}
-.item-add-btn:hover{background:#dbeafe}
-.item-empty{font-size:12px;color:#94a3b8;padding:6px 0}
+.irow{display:flex;gap:8px;margin-bottom:8px}
+.irow input{border:1.5px solid var(--line);border-radius:12px;padding:9px 11px;font-size:13.5px;background:#fff;outline:none;min-height:44px}
+.irow input.desc{flex:1}
+.irow input.qty{flex:0 0 66px;text-align:center}
+.irow button{width:44px;flex:0 0 44px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--red);font-size:15px;cursor:pointer}
+.iadd{width:100%;min-height:46px;border:1.5px dashed var(--accent);border-radius:14px;background:#fff6ef;color:var(--accent-d);font-size:13px;font-weight:400;cursor:pointer;margin-top:2px}
 
-/* PHOTO GALLERY */
-.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.photo-thumb{position:relative;aspect-ratio:1.586;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;cursor:pointer}
-.photo-thumb img{width:100%;height:100%;object-fit:cover}
-.photo-del{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.65);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
-.photo-add{aspect-ratio:1.586;border:2px dashed #cbd5e1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:#94a3b8;font-size:20px;gap:2px;background:transparent}
-.photo-add:hover{border-color:#2563eb;color:#2563eb}
-.photo-hint{font-size:11px;color:#94a3b8;margin-top:6px}
+.fsave{margin:22px 0 8px;width:100%;min-height:60px;border:none;border-radius:18px;background:linear-gradient(150deg,var(--accent),var(--accent-d));color:#fff;font-size:17px;font-weight:500;box-shadow:0 10px 26px rgba(255,143,94,.45);cursor:pointer}
+.fsave:disabled{opacity:.6}
 
-.modal-foot{padding:16px 22px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:10px}
-.btn-cancel{padding:9px 20px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#64748b;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;min-height:var(--touch-min)}
-.btn-cancel:hover{background:#f8fafc}
-.btn-save{padding:9px 20px;border-radius:8px;background:#2563eb;color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;min-height:var(--touch-min)}
-.btn-save:hover{background:#1d4ed8}
+/* DETAIL */
+.dl-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.dl-row .k{color:var(--muted);font-weight:300}
+.dl-row .v{color:var(--ink);font-weight:400;text-align:right;max-width:60%}
+.dl-imgs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.dl-imgs img{width:90px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:pointer}
 
-/* DELIVER MODAL (small) */
-.mini-box{max-width:380px}
+/* SIGNATURE STUB */
+.sigstub{margin-top:8px;min-height:120px;border:2px dashed #cbb;border-radius:16px;background:#faf5f2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);text-align:center;padding:12px}
+.sigstub .e{font-size:26px}
+.sigstub .t{font-size:12.5px;font-weight:300}
+.sigstub .n{font-size:10.5px;color:var(--wait);font-weight:300}
+
+/* EXPORT MENU */
+.xmenu{padding:8px 4px}
+.xbtn{width:100%;min-height:var(--touch);border:1.5px solid var(--line);border-radius:16px;background:#fff;color:var(--brown);font-size:14.5px;font-weight:400;margin-bottom:10px;display:flex;align-items:center;gap:12px;padding:0 18px;cursor:pointer}
+.xbtn .e{font-size:22px}
+.xbtn small{display:block;font-size:10.5px;color:var(--muted);font-weight:300}
 
 /* TOAST */
-.toast{position:fixed;bottom:24px;right:24px;background:#1e293b;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:200;transform:translateY(80px);opacity:0;transition:all .3s;max-width:300px}
-.toast.show{transform:translateY(0);opacity:1}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--brown);color:#fff;padding:12px 22px;border-radius:14px;font-size:13.5px;font-weight:300;z-index:400;opacity:0;transition:all .28s;pointer-events:none;max-width:90%;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:#f1f5f9}
-::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
+/* IMG VIEWER */
+.viewer{position:fixed;inset:0;background:rgba(74,59,53,.9);z-index:600;display:flex;align-items:center;justify-content:center;cursor:zoom-out;padding:20px}
+.viewer img{max-width:94vw;max-height:90vh;border-radius:12px}
 
-@media(max-width:480px){
-  .modal-body{grid-template-columns:1fr}
-  .card-grid{grid-template-columns:1fr}
-  .header-title h1{font-size:15px}
-  .filters .filter-clear{width:100%;text-align:right}
+::-webkit-scrollbar{width:0}
+
+/* ===== PRINT (PDF via browser) ===== */
+#printArea{display:none}
+@media print{
+  body *{visibility:hidden}
+  #printArea,#printArea *{visibility:visible}
+  #printArea{display:block;position:absolute;inset:0;padding:0;background:#fff;color:#000}
+  .app,.nav,.sheet{display:none!important}
+  @page{margin:14mm}
 }
+.pr-wrap{font-family:'Sarabun','Mitr',sans-serif;color:#111}
+.pr-h{text-align:center;border-bottom:2px solid #333;padding-bottom:8px;margin-bottom:14px}
+.pr-h h1{font-size:20px}.pr-h p{font-size:12px;color:#555}
+table.pr-t{width:100%;border-collapse:collapse;font-size:11px}
+table.pr-t th,table.pr-t td{border:1px solid #999;padding:5px 6px;text-align:left;vertical-align:top}
+table.pr-t th{background:#f0e6df}
+.pr-slip{border:1px solid #333;border-radius:8px;padding:16px;margin-bottom:14px}
+.pr-slip h2{font-size:16px;margin-bottom:8px;border-bottom:1px solid #ccc;padding-bottom:6px}
+.pr-slip .g{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;font-size:12.5px}
+.pr-slip .g div b{color:#555;font-weight:600}
+.pr-slip .imgs{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.pr-slip .imgs img{width:120px;height:84px;object-fit:cover;border:1px solid #999}
+.pr-slip .sig{margin-top:14px;border-top:1px dashed #999;padding-top:10px;display:flex;justify-content:space-between}
+.pr-slip .sig .box{width:45%;text-align:center;font-size:11px;color:#555}
+.pr-slip .sig .box img{max-width:100%;height:60px;object-fit:contain}
+.pr-slip .sig .line{border-top:1px solid #333;margin-top:40px;padding-top:4px}
+
+/* Firebase note */
+.fb-note{margin:12px 16px;background:#fff6ef;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:11.5px;color:#9c6b4f;font-weight:300;line-height:1.6}
+.fb-note b{color:var(--brown);font-weight:500}
 </style>
-<!-- Firebase v10 compat SDK -->
+
+<!-- Firebase v10 compat SDK (app + auth + firestore + storage) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<!-- SheetJS สำหรับ export Excel -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
-<!-- HEADER -->
-<div class="header">
-  <div class="header-title">
-    <div class="header-logo">📦</div>
-    <div>
-      <h1>รับ-ส่งพัสดุ / เอกสาร / กุญแจ</h1>
-      <p>บันทึกและติดตามรายการรับ-ส่งของทุกโครงการ</p>
-    </div>
-  </div>
-  <div class="header-actions">
-    <a class="btn btn-outline" href="../Retail_Dashboard_2025.html">🏬 กลับ Dashboard</a>
-    <button class="btn btn-primary" onclick="openModal(null)">＋ บันทึกรายการใหม่</button>
+<!-- ===== PASSCODE GATE ===== -->
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <div class="logo">🧡</div>
+    <h1>รับ-ส่งของ</h1>
+    <p>ใส่รหัสทีมเพื่อเข้าใช้งาน</p>
+    <div class="gate-err" id="gateErr"></div>
+    <input type="password" id="gateInput" inputmode="numeric" placeholder="••••" autocomplete="off"
+           onkeydown="if(event.key==='Enter')checkPasscode()">
+    <button onclick="checkPasscode()">เข้าใช้งาน</button>
   </div>
 </div>
 
-<div class="main">
-  <div id="syncBanner"></div>
-
-  <!-- KPI -->
-  <div class="kpi-grid" id="kpiGrid"></div>
-
-  <!-- FILTERS -->
-  <div class="filters">
-    <div class="filter-group">
-      <label>โครงการ</label>
-      <select id="fltProject" onchange="applyFilters()"><option value="">ทั้งหมด</option></select>
+<!-- ===== APP ===== -->
+<div class="app" id="app" style="display:none">
+  <div class="top">
+    <div class="top-row">
+      <div>
+        <h1>รับ-ส่งของ 🧡</h1>
+        <p>บันทึกง่าย ๆ ทุกโครงการ</p>
+      </div>
+      <div class="sync" id="syncBadge"></div>
     </div>
-    <div class="filter-group">
-      <label>ทิศทาง</label>
-      <select id="fltDirection" onchange="applyFilters()">
-        <option value="">ทั้งหมด</option>
-        <option value="in">รับเข้า</option>
-        <option value="out">ส่งออก</option>
-      </select>
+    <div class="proj-pick">
+      <span>📍</span>
+      <select id="fltProject" onchange="render()"><option value="">ทุกโครงการ</option></select>
     </div>
-    <div class="filter-group">
-      <label>ประเภท</label>
-      <select id="fltType" onchange="applyFilters()">
-        <option value="">ทั้งหมด</option>
-        <option value="parcel">พัสดุ</option>
-        <option value="document">เอกสาร</option>
-        <option value="key">กุญแจ</option>
-        <option value="sticker">สติ๊กเกอร์</option>
-        <option value="keycard">คีย์การ์ด</option>
-        <option value="accesscard">บัตรผ่านเข้า-ออก</option>
-      </select>
-    </div>
-    <div class="filter-group">
-      <label>สถานะ</label>
-      <select id="fltStatus" onchange="applyFilters()">
-        <option value="">ทั้งหมด</option>
-        <option value="pending">รอรับ</option>
-        <option value="delivered">ส่งมอบแล้ว</option>
-      </select>
-    </div>
-    <div class="filter-group search-wrap">
-      <label>ค้นหา</label>
-      <input type="text" id="fltSearch" placeholder="ชื่อคน / รายการของ / หมายเหตุ" oninput="applyFilters()">
-    </div>
-    <div class="filter-clear" onclick="clearFilters()">ล้างตัวกรอง ✕</div>
   </div>
 
-  <!-- LIST -->
-  <div class="list-header">
-    <h3>รายการรับ-ส่ง</h3>
-    <span class="list-count" id="listCount"></span>
+  <!-- quick chips -->
+  <div class="chips">
+    <button class="chip dc on" data-dir="" onclick="setDir(this,'')">ทั้งหมด</button>
+    <button class="chip dc" data-dir="in" onclick="setDir(this,'in')">⬇ รับเข้า</button>
+    <button class="chip dc" data-dir="out" onclick="setDir(this,'out')">⬆ ส่งออก</button>
+    <button class="chip qd" data-q="today" onclick="setQuick(this,'today')">📅 วันนี้</button>
+    <button class="chip qd" data-q="7d" onclick="setQuick(this,'7d')">7 วัน</button>
+    <button class="adv-toggle" onclick="document.getElementById('advPanel').classList.toggle('open')">ตัวกรอง ▾</button>
   </div>
-  <div class="card-grid" id="cardGrid"></div>
-  <div class="no-data" id="noData" style="display:none">
-    <p>📭 ยังไม่มีรายการ</p>
-    <span>กดปุ่ม "＋ บันทึกรายการใหม่" เพื่อเริ่มบันทึก</span>
+
+  <div class="adv" id="advPanel">
+    <div class="fg"><label>ประเภท</label>
+      <select id="fltType" onchange="render()">
+        <option value="">ทุกประเภท</option>
+        <option value="parcel">📦 พัสดุ</option><option value="document">📄 เอกสาร</option>
+        <option value="key">🔑 กุญแจ</option><option value="sticker">🏷️ สติ๊กเกอร์</option>
+        <option value="keycard">💳 คีย์การ์ด</option><option value="accesscard">🎫 บัตรผ่าน</option>
+      </select>
+    </div>
+    <div class="fg"><label>จากวันที่</label><input type="date" id="fltFrom" onchange="render()"></div>
+    <div class="fg"><label>ถึงวันที่</label><input type="date" id="fltTo" onchange="render()"></div>
+    <div class="fg"><label>เรียงลำดับ</label>
+      <select id="fltSort" onchange="render()">
+        <option value="new">ใหม่→เก่า</option><option value="old">เก่า→ใหม่</option>
+      </select>
+    </div>
+    <div class="fg" style="flex:2"><label>ค้นหา</label><input type="text" id="fltSearch" placeholder="ชื่อ / รายการ / หมายเหตุ" oninput="render()"></div>
+    <button class="adv-clear" onclick="clearFilters()">ล้าง ✕</button>
   </div>
+
+  <div class="fb-note" id="fbNote" style="display:none"></div>
+
+  <div class="statline" id="statLine"></div>
+
+  <div class="list" id="list"></div>
 </div>
 
-<!-- MODAL: บันทึก/แก้ไข -->
-<div class="modal-overlay" id="modalOverlay" style="display:none">
-  <div class="modal-box">
-    <div class="modal-head">
-      <h3 id="modalTitle">＋ บันทึกรายการใหม่</h3>
-      <button class="modal-close" onclick="closeModal()">✕</button>
+<!-- ===== BOTTOM NAV ===== -->
+<div class="nav" id="nav" style="display:none">
+  <button class="item on" data-tab="all" onclick="setTab('all')"><span class="ic">📋</span>ทั้งหมด</button>
+  <button class="item" data-tab="pending" onclick="setTab('pending')"><span class="ic">⏳</span>ค้างอยู่</button>
+  <button class="add" onclick="openRecord(null)"><span class="btn">＋</span><span class="txt">บันทึก</span></button>
+  <button class="item" data-tab="delivered" onclick="setTab('delivered')"><span class="ic">✅</span>ส่งมอบ</button>
+  <button class="item" data-tab="report" onclick="openExport()"><span class="ic">📤</span>รายงาน</button>
+</div>
+
+<!-- ===== RECORD SHEET ===== -->
+<div class="sheet" id="recSheet">
+  <div class="sheet-box">
+    <div class="sheet-head">
+      <button class="back" onclick="closeSheet('recSheet')">‹</button>
+      <h2 id="recTitle">บันทึกรายการใหม่</h2>
     </div>
-    <div class="modal-body">
-      <div class="form-group full">
-        <label class="req">โครงการ</label>
-        <input type="text" id="fProject" list="projectList" placeholder="พิมพ์หรือเลือกชื่อโครงการ">
-        <datalist id="projectList"></datalist>
+    <div class="sheet-body">
+      <label class="flabel" for="rProject">โครงการ <span class="req">*</span></label>
+      <input class="finput" id="rProject" list="projList" placeholder="พิมพ์หรือเลือกโครงการ">
+      <datalist id="projList"></datalist>
+
+      <label class="flabel" for="rOccurred">วันเวลาที่รับ-ส่ง <span class="req">*</span></label>
+      <input class="finput" type="datetime-local" id="rOccurred">
+
+      <label class="flabel">ทิศทาง <span class="req">*</span></label>
+      <div class="seg">
+        <button type="button" id="segIn" onclick="setSeg('in')">⬇ รับเข้า</button>
+        <button type="button" id="segOut" onclick="setSeg('out')">⬆ ส่งออก</button>
       </div>
 
-      <div class="form-group full">
-        <label class="req">ทิศทาง</label>
-        <div class="radio-row">
-          <div class="radio-pill dir-in">
-            <input type="radio" name="direction" id="dirIn" value="in" onclick="toggleDirection()">
-            <label for="dirIn">⬇ รับเข้า</label>
-          </div>
-          <div class="radio-pill dir-out">
-            <input type="radio" name="direction" id="dirOut" value="out" onclick="toggleDirection()">
-            <label for="dirOut">⬆ ส่งออก</label>
-          </div>
+      <label class="flabel">ประเภทของที่รับ-ส่ง <span class="req">*</span></label>
+      <div class="types" id="typeGrid">
+        <button type="button" data-t="parcel" onclick="setType('parcel')"><span class="e">📦</span>พัสดุ</button>
+        <button type="button" data-t="document" onclick="setType('document')"><span class="e">📄</span>เอกสาร</button>
+        <button type="button" data-t="key" onclick="setType('key')"><span class="e">🔑</span>กุญแจ</button>
+        <button type="button" data-t="sticker" onclick="setType('sticker')"><span class="e">🏷️</span>สติ๊กเกอร์</button>
+        <button type="button" data-t="keycard" onclick="setType('keycard')"><span class="e">💳</span>คีย์การ์ด</button>
+        <button type="button" data-t="accesscard" onclick="setType('accesscard')"><span class="e">🎫</span>บัตรผ่าน</button>
+      </div>
+
+      <label class="flabel">รูปพัสดุ/ของ <span class="req">* (บังคับ ≥1)</span></label>
+      <div class="cam" onclick="document.getElementById('itemPhotoInput').click()">
+        <span class="e">📷</span><span class="t">แตะเพื่อถ่ายรูปของ</span><span class="r">ระบบย่อขนาดให้อัตโนมัติ</span>
+      </div>
+      <input type="file" id="itemPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="addPhoto(event,'item')">
+      <div class="pgrid" id="itemPhotoGrid"></div>
+
+      <label class="flabel">ผู้เกี่ยวข้อง <span class="req">*</span></label>
+      <div class="ptoggle">
+        <button type="button" id="ptIn" onclick="setPerson('internal')">🧑‍💼 พนักงานในบริษัท</button>
+        <button type="button" id="ptEx" onclick="setPerson('external')">👤 บุคคลภายนอก</button>
+      </div>
+
+      <div id="internalBlock" style="display:none">
+        <label class="flabel" for="rInName">ชื่อ <span class="req">*</span></label><input class="finput" id="rInName">
+        <label class="flabel" for="rInSurname">นามสกุล <span class="req">*</span></label><input class="finput" id="rInSurname">
+        <label class="flabel" for="rInPhone">เบอร์โทร <span class="req">*</span></label><input class="finput" type="tel" id="rInPhone" placeholder="0xx-xxx-xxxx">
+        <label class="flabel" for="rInDept">แผนก <span class="req">*</span></label><input class="finput" id="rInDept">
+      </div>
+
+      <div id="externalBlock" style="display:none">
+        <label class="flabel" for="rExName">ชื่อ (ถ้าทราบ)</label><input class="finput" id="rExName" placeholder="ไม่บังคับ">
+        <label class="flabel">รูปบัตรประชาชน <span class="req">* (1–2 รูป)</span></label>
+        <div class="cam" onclick="document.getElementById('idPhotoInput').click()">
+          <span class="e">🪪</span><span class="t">แตะเพื่อถ่าย/แนบรูปบัตร</span><span class="r">แนบได้ 1–2 รูป</span>
         </div>
+        <input type="file" id="idPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="addPhoto(event,'id')">
+        <div class="pgrid" id="idPhotoGrid"></div>
+        <div class="pdpa">🔒 รูปบัตรใช้เพื่อยืนยันตัวตนการรับ-ส่งเท่านั้น จัดเก็บอย่างปลอดภัยและเข้าถึงได้เฉพาะผู้มีสิทธิ์</div>
       </div>
 
-      <div class="form-group full">
-        <label class="req">ประเภทของที่รับ-ส่ง</label>
-        <div class="radio-row">
-          <div class="radio-pill"><input type="radio" name="itemType" id="typeParcel" value="parcel"><label for="typeParcel">📦 พัสดุ</label></div>
-          <div class="radio-pill"><input type="radio" name="itemType" id="typeDoc" value="document"><label for="typeDoc">📄 เอกสาร</label></div>
-          <div class="radio-pill"><input type="radio" name="itemType" id="typeKey" value="key"><label for="typeKey">🔑 กุญแจ</label></div>
-          <div class="radio-pill"><input type="radio" name="itemType" id="typeSticker" value="sticker"><label for="typeSticker">🏷️ สติ๊กเกอร์</label></div>
-          <div class="radio-pill"><input type="radio" name="itemType" id="typeKeycard" value="keycard"><label for="typeKeycard">💳 คีย์การ์ด</label></div>
-          <div class="radio-pill"><input type="radio" name="itemType" id="typeAccess" value="accesscard"><label for="typeAccess">🎫 บัตรผ่านเข้า-ออก</label></div>
-        </div>
-      </div>
-
-      <div class="form-group full">
-        <label class="req">ประเภทบุคคล</label>
-        <div class="radio-row">
-          <div class="radio-pill"><input type="radio" name="personType" id="ptInternal" value="internal" onclick="togglePersonType()"><label for="ptInternal">🧑‍💼 พนักงานในบริษัท</label></div>
-          <div class="radio-pill"><input type="radio" name="personType" id="ptExternal" value="external" onclick="togglePersonType()"><label for="ptExternal">👤 บุคคลภายนอก</label></div>
-        </div>
-      </div>
-
-      <!-- INTERNAL FIELDS -->
-      <div id="internalFields" style="display:none" class="form-group full">
-        <div class="modal-body" style="padding:0;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="form-group"><label class="req">ชื่อ</label><input type="text" id="inName"></div>
-          <div class="form-group"><label class="req">นามสกุล</label><input type="text" id="inSurname"></div>
-          <div class="form-group"><label class="req">เบอร์โทร</label><input type="tel" id="inPhone" placeholder="0xx-xxx-xxxx"></div>
-          <div class="form-group"><label class="req">แผนก</label><input type="text" id="inDept"></div>
-        </div>
-      </div>
-
-      <!-- EXTERNAL FIELDS -->
-      <div id="externalFields" style="display:none" class="form-group full">
-        <div class="form-group" style="margin-bottom:10px">
-          <label>ชื่อ (ถ้าทราบ)</label>
-          <input type="text" id="exName" placeholder="ชื่อบุคคลภายนอก (ไม่บังคับ)">
-        </div>
-        <label class="req" style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em">รูปถ่าย/สแกนบัตรประชาชน</label>
-        <div class="photo-grid" id="idPhotoGrid" style="margin-top:6px"></div>
-        <div class="photo-hint">ถ่ายรูปหรือแนบไฟล์อย่างน้อย 1 รูป — ระบบจะย่อขนาดอัตโนมัติ</div>
-        <input type="file" id="idPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="handleIdPhotoAdd(event)">
-      </div>
-
-      <div class="form-group full">
-        <label>ผู้บันทึก</label>
-        <input type="text" id="fRecordedBy" placeholder="ชื่อผู้บันทึกรายการนี้">
-      </div>
-    </div>
-
-    <div class="modal-section">
-      <div class="modal-sec-title">📋 รายการของ (มีอะไรบ้าง / จำนวน)</div>
+      <label class="flabel">รายการของ <span class="req">* (≥1)</span></label>
       <div id="itemRows"></div>
-      <button type="button" class="item-add-btn" onclick="addItemRow()">＋ เพิ่มรายการ</button>
-    </div>
+      <button type="button" class="iadd" onclick="addItemRow()">＋ เพิ่มรายการ</button>
 
-    <div class="modal-section">
-      <div class="modal-sec-title">📝 หมายเหตุเพิ่มเติม</div>
-      <textarea id="fNotes" placeholder="หมายเหตุ (ถ้ามี)" style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:56px"></textarea>
-    </div>
+      <label class="flabel" for="rNotes">หมายเหตุ</label>
+      <textarea class="finput" id="rNotes" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"></textarea>
 
-    <div class="modal-foot">
-      <button class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
-      <button class="btn-save" onclick="saveLog()">บันทึก</button>
+      <label class="flabel" for="rRecordedBy">ผู้บันทึก <span class="req">*</span></label>
+      <input class="finput" id="rRecordedBy" placeholder="ชื่อผู้บันทึกรายการนี้">
+
+      <button class="fsave" id="recSaveBtn" onclick="saveRecord()">บันทึกรายการ</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: เปลี่ยนสถานะเป็นส่งมอบแล้ว -->
-<div class="modal-overlay" id="deliverOverlay" style="display:none">
-  <div class="modal-box mini-box">
-    <div class="modal-head">
-      <h3>✅ ยืนยันส่งมอบแล้ว</h3>
-      <button class="modal-close" onclick="closeDeliverModal()">✕</button>
+<!-- ===== DELIVER SHEET ===== -->
+<div class="sheet" id="delSheet">
+  <div class="sheet-box">
+    <div class="sheet-head">
+      <button class="back" onclick="closeSheet('delSheet')">‹</button>
+      <h2>✅ ยืนยันส่งมอบ</h2>
     </div>
-    <div class="modal-body" style="grid-template-columns:1fr;max-height:none">
-      <div class="form-group">
-        <label class="req">ส่งมอบให้กับ</label>
-        <input type="text" id="deliverTo" placeholder="ชื่อผู้รับมอบจริง">
+    <div class="sheet-body">
+      <label class="flabel" for="dTo">ส่งมอบให้กับ <span class="req">*</span></label>
+      <input class="finput" id="dTo" placeholder="ชื่อผู้รับมอบจริง">
+      <label class="flabel" for="dOccurred">วันเวลาที่ส่งมอบ <span class="req">*</span></label>
+      <input class="finput" type="datetime-local" id="dOccurred">
+
+      <label class="flabel">ลายเซ็นผู้รับมอบ <span class="req">*</span></label>
+      <!-- ⏸️ SIGNATURE PAD STUB (decision 13) — รอโค้ดจาก Phoohats/Retail-Inspection-APP
+           เมื่อ repo เปิด public: แทนที่ block นี้ด้วย <canvas> pad + ตั้ง SIGNATURE_READY=true
+           แล้ว capture toDataURL() เก็บลง Storage path parcelLog/<id>/signature/ -->
+      <div class="sigstub">
+        <span class="e">✍️</span>
+        <span class="t">signature pad กำลังรอรวมโค้ดจาก Retail-Inspection-APP</span>
+        <span class="n">(decision 13 · เปิดใช้เมื่อ repo เป็น public — ตอนนี้ส่งมอบได้โดยยังไม่บังคับเซ็น)</span>
       </div>
+
+      <button class="fsave" onclick="confirmDeliver()">ยืนยันส่งมอบ · ล็อกรายการ</button>
     </div>
-    <div class="modal-foot">
-      <button class="btn-cancel" onclick="closeDeliverModal()">ยกเลิก</button>
-      <button class="btn-save" onclick="confirmDeliver()">ยืนยัน</button>
+  </div>
+</div>
+
+<!-- ===== DETAIL SHEET ===== -->
+<div class="sheet" id="detSheet">
+  <div class="sheet-box">
+    <div class="sheet-head">
+      <button class="back" onclick="closeSheet('detSheet')">‹</button>
+      <h2>รายละเอียดรายการ</h2>
+    </div>
+    <div class="sheet-body" id="detBody"></div>
+  </div>
+</div>
+
+<!-- ===== EXPORT SHEET ===== -->
+<div class="sheet" id="expSheet">
+  <div class="sheet-box">
+    <div class="sheet-head">
+      <button class="back" onclick="closeSheet('expSheet')">‹</button>
+      <h2>📤 รายงาน / ส่งออก</h2>
+    </div>
+    <div class="sheet-body">
+      <div class="xmenu">
+        <p style="font-size:12px;color:var(--muted);font-weight:300;margin-bottom:12px">ส่งออกตามตัวกรองที่เลือกอยู่ (<b id="expCount">0</b> รายการ)</p>
+        <button class="xbtn" onclick="exportExcel()"><span class="e">📊</span><div>ตาราง Excel (.xlsx)<small>รายการทั้งหมดตามตัวกรอง</small></div></button>
+        <button class="xbtn" onclick="exportPdfReport()"><span class="e">📄</span><div>PDF รายงานรวม<small>ตารางสรุปส่งหัวหน้า (พิมพ์/บันทึกเป็น PDF)</small></div></button>
+      </div>
     </div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="printArea"></div>
 
 <script>
-// ━━━ FIREBASE CONFIG ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ⚠️  Fill in your project config from Firebase Console → Project Settings
-// (ใช้ config ชุดเดียวกับ Retail_Dashboard_2025.html — โปรเจกต์ retail-mom-app)
+"use strict";
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  CONFIG — ⚠️ Plue ต้องแก้ก่อนใช้งานจริง (ดู HANDOFF §5 / PLAN Setup)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const FIREBASE_CONFIG = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:      "YOUR_PROJECT.appspot.com",
-  messagingSenderId:  "YOUR_SENDER_ID",
-  appId:              "YOUR_APP_ID"
+  apiKey:            "AIzaSyC2tNzFi18L47syjOz_S7W1qYhonG3lo2Q",
+  authDomain:        "retail-handover-log.firebaseapp.com",
+  projectId:         "retail-handover-log",
+  storageBucket:     "retail-handover-log.firebasestorage.app",
+  messagingSenderId: "1041378515383",
+  appId:             "1:1041378515383:web:8c3c35aae35f7f84957032"
 };
+const PASSCODE = "1234";               // 🔑 Plue กำหนดรหัสทีมตรงนี้
+const SIGNATURE_READY = false;         // เปลี่ยนเป็น true เมื่อรวม signature pad แล้ว
 const USE_FIREBASE = (FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY");
-const COLLECTION = 'parcelLog';
-const LOCAL_KEY = 'parcelKeyLog_v1';
+const COLLECTION = "parcelLog";
+const LOCAL_KEY  = "handoverLog_v2";
+const RECBY_KEY  = "handover_lastRecordedBy";
 
-let db = null;
-if (USE_FIREBASE) {
-  try {
-    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    db = firebase.firestore();
-    db.settings({ ignoreUndefinedProperties: true });
-    console.info('%c🔥 Firestore connected (parcelLog)','color:#f59e0b;font-weight:bold');
-  } catch(e){ console.error('Firebase init failed', e); db = null; }
-}
-
-// ━━━ SEED PROJECT LIST ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const SEED_PROJECTS = [
-  'IDEO Verve Ratchaprarop','Somerset Rama 9','Ashton Asoke-Rama 9',
-  'IDEO Sukhumvit-Rama 4','Culture Chula','IDEO Mobi Sukhumvit Eastpoint',
-  'Elio Sathorn-Wuttakat','IDEO Q Chula Samyan'
+  "IDEO Verve Ratchaprarop","Somerset Rama 9","Ashton Asoke-Rama 9",
+  "IDEO Sukhumvit-Rama 4","Culture Chula","Elio Sathorn-Wutthakat",
+  "Unio Serithai","IDEO Mobi Rama 9"
 ];
+const TYPE_LABEL = {parcel:"📦 พัสดุ",document:"📄 เอกสาร",key:"🔑 กุญแจ",sticker:"🏷️ สติ๊กเกอร์",keycard:"💳 คีย์การ์ด",accesscard:"🎫 บัตรผ่าน"};
 
-let logs = [];
-let editingId = null;
-let modalItems = [];   // [{description, qty}]
-let modalPhotos = [];  // [{dataUrl, name, addedAt}]
-let deliverTargetId = null;
+// ━━━ Firebase init ━━━
+let auth=null, db=null, storage=null;
+if(USE_FIREBASE){
+  try{
+    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    auth=firebase.auth(); db=firebase.firestore(); storage=firebase.storage();
+    db.settings({ignoreUndefinedProperties:true});
+  }catch(e){ console.error("Firebase init failed",e); auth=db=storage=null; }
+}
 
-// ━━━ PERSISTENCE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function loadLocal(){
-  try{ return JSON.parse(localStorage.getItem(LOCAL_KEY)||'[]'); }catch(e){ return []; }
+// ━━━ state ━━━
+let logs=[];
+let tab="all", dirFilter="", quickFilter="";
+let editId=null, delId=null;
+let mItem=[], mId=[], mItems=[];        // modal: item photos, id photos, item rows
+let seg="", type="", person="";
+
+// ━━━ helpers ━━━
+const $=id=>document.getElementById(id);
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function nowLocal(){const d=new Date(),p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;}
+function isoToLocal(iso){if(!iso)return nowLocal();const d=new Date(iso),p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;}
+function localToIso(v){return v?new Date(v).toISOString():new Date().toISOString();}
+function fmtDate(iso){if(!iso)return "-";return new Date(iso).toLocaleString("th-TH",{day:"2-digit",month:"short",year:"2-digit",hour:"2-digit",minute:"2-digit"});}
+function fmtDay(iso){if(!iso)return "-";return new Date(iso).toLocaleDateString("th-TH",{day:"2-digit",month:"short",year:"2-digit"});}
+function imgSrc(p){return p? (p.url||p.dataUrl||"") : "";}
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove("show"),2400);}
+
+// ━━━ passcode gate ━━━
+function gateOK(){ $("gate").style.display="none"; $("app").style.display=""; $("nav").style.display=""; init(); }
+function checkPasscode(){
+  const v=$("gateInput").value.trim();
+  if(v===PASSCODE){ sessionStorage.setItem("handover_gate","1"); gateOK(); }
+  else{ $("gateErr").textContent="รหัสไม่ถูกต้อง ลองใหม่อีกครั้ง"; $("gateInput").value=""; $("gateInput").focus(); }
 }
-function saveLocal(){
-  localStorage.setItem(LOCAL_KEY, JSON.stringify(logs));
-}
-async function fbLoadLogs(){
-  const snap = await db.collection(COLLECTION).orderBy('createdAt','desc').get();
-  return snap.docs.map(d=>({_id:d.id, ...d.data()}));
-}
-async function persistLog(log){
+if(sessionStorage.getItem("handover_gate")==="1"){ window.addEventListener("DOMContentLoaded",gateOK); }
+
+// ━━━ init ━━━
+async function init(){
+  renderSync();
+  if(USE_FIREBASE && auth){
+    try{ await auth.signInAnonymously(); }
+    catch(e){ console.error("anon sign-in failed",e); toast("⚠️ เข้าสู่ระบบอัตโนมัติไม่สำเร็จ"); }
+  }
   if(USE_FIREBASE && db){
-    const {_id, ...data} = log;
-    if(_id){ await db.collection(COLLECTION).doc(_id).set(data,{merge:true}); return _id; }
-    const ref = await db.collection(COLLECTION).add(data);
-    return ref.id;
-  } else {
-    if(!log._id) log._id = 'local_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
-    saveLocal();
-    return log._id;
+    // realtime: ทุกเครื่องเห็นการเปลี่ยนแปลงทันทีโดยไม่ต้อง reload (PLAN verify #7)
+    db.collection(COLLECTION).orderBy("createdAt","desc").onSnapshot(
+      snap=>{ logs=snap.docs.map(d=>({_id:d.id,...d.data()})); refreshProjects(); render(); },
+      err=>{ console.error("onSnapshot failed, fallback local",err); logs=loadLocal(); refreshProjects(); render(); }
+    );
+  }else{
+    logs=loadLocal(); refreshProjects(); render();
   }
 }
-async function removeLog(id){
-  if(USE_FIREBASE && db){ await db.collection(COLLECTION).doc(id).delete(); }
-  logs = logs.filter(l=>l._id!==id);
-  if(!(USE_FIREBASE&&db)) saveLocal();
-}
-
-// ━━━ INIT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-document.addEventListener('DOMContentLoaded', async () => {
-  renderSyncBanner();
-  if(USE_FIREBASE && db){
-    try{ logs = await fbLoadLogs(); }
-    catch(e){ console.error('Firestore load failed, fallback local', e); logs = loadLocal(); }
-  } else {
-    logs = loadLocal();
-  }
-  refreshProjectList();
-  applyFilters();
-});
-
-function renderSyncBanner(){
-  const el = document.getElementById('syncBanner');
-  if(USE_FIREBASE && db){
-    el.innerHTML = `<div class="sync-banner sync-on">🔥 เชื่อมต่อ Firestore แล้ว — ข้อมูลจะซิงก์กับทุกเครื่องอัตโนมัติ</div>`;
-  } else {
-    el.innerHTML = `<div class="sync-banner sync-off">⚠️ ยังไม่ได้เชื่อมต่อ Firestore — ข้อมูลจะถูกเก็บเฉพาะเครื่องนี้ (localStorage) จนกว่าจะตั้งค่า FIREBASE_CONFIG ด้านบนของไฟล์นี้</div>`;
+function renderSync(){
+  const b=$("syncBadge");
+  if(USE_FIREBASE&&db){ b.className="sync on"; b.textContent="🔥 ซิงก์ทุกเครื่อง"; $("fbNote").style.display="none"; }
+  else{
+    b.className="sync off"; b.textContent="📴 เครื่องนี้เท่านั้น";
+    $("fbNote").style.display="";
+    $("fbNote").innerHTML="<b>⚠️ โหมดทดสอบ (localStorage)</b> — ยังไม่ได้ตั้งค่า Firebase ข้อมูล/รูปเก็บในเครื่องนี้ชั่วคราว "
+      +"เมื่อพร้อมใช้จริงให้ใส่ <b>FIREBASE_CONFIG</b> + เปิด Firestore/Storage/Anonymous Auth ตาม HANDOFF §5";
   }
 }
 
-// ━━━ PROJECT DATALIST ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function refreshProjectList(){
-  const used = logs.map(l=>l.project).filter(Boolean);
-  const all = Array.from(new Set([...SEED_PROJECTS, ...used])).sort((a,b)=>a.localeCompare(b,'th'));
-  const dl = document.getElementById('projectList');
-  dl.innerHTML = all.map(p=>`<option value="${escapeHtml(p)}">`).join('');
-  const fltSel = document.getElementById('fltProject');
-  const cur = fltSel.value;
-  fltSel.innerHTML = '<option value="">ทั้งหมด</option>' + all.map(p=>`<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
-  fltSel.value = cur;
+// ━━━ persistence ━━━
+function loadLocal(){try{return JSON.parse(localStorage.getItem(LOCAL_KEY)||"[]");}catch(e){return [];}}
+function saveLocal(){localStorage.setItem(LOCAL_KEY,JSON.stringify(logs));}
+
+// upload one resized image; returns photo descriptor
+async function uploadPhoto(recordId,kind,ph,idx){
+  if(USE_FIREBASE&&storage){
+    // race-safe: ถ้า blob ยังไม่มา (toBlob ยังไม่เสร็จ) ให้ derive จาก dataUrl
+    let blob=ph.blob;
+    if(!blob&&ph.dataUrl){ blob=await (await fetch(ph.dataUrl)).blob(); }
+    const path=`${COLLECTION}/${recordId}/${kind}/${kind}_${idx}_${Date.now()}.jpg`;
+    const ref=storage.ref().child(path);
+    await ref.put(blob,{contentType:"image/jpeg"});
+    const url=await ref.getDownloadURL();
+    return {storagePath:path,url,addedAt:new Date().toISOString()};
+  }
+  // fallback: keep base64 inline
+  return {dataUrl:ph.dataUrl,addedAt:ph.addedAt||new Date().toISOString()};
+}
+// process a modal photo array → persisted descriptors (upload new ones, keep existing)
+async function processPhotos(recordId,kind,arr){
+  const out=[];
+  for(let i=0;i<arr.length;i++){
+    const ph=arr[i];
+    if(ph.url||(!ph.blob&&ph.dataUrl&&!USE_FIREBASE)){ out.push(ph.url?{storagePath:ph.storagePath,url:ph.url,addedAt:ph.addedAt}:{dataUrl:ph.dataUrl,addedAt:ph.addedAt}); }
+    else{ out.push(await uploadPhoto(recordId,kind,ph,i)); }
+  }
+  return out;
 }
 
-// ━━━ FILTER + RENDER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function applyFilters(){
-  const project = document.getElementById('fltProject').value;
-  const direction = document.getElementById('fltDirection').value;
-  const itemType = document.getElementById('fltType').value;
-  const status = document.getElementById('fltStatus').value;
-  const q = document.getElementById('fltSearch').value.trim().toLowerCase();
+// ━━━ projects ━━━
+function refreshProjects(){
+  const used=logs.map(l=>l.project).filter(Boolean);
+  const all=Array.from(new Set([...SEED_PROJECTS,...used])).sort((a,b)=>a.localeCompare(b,"en"));
+  $("projList").innerHTML=all.map(p=>`<option value="${esc(p)}">`).join("");
+  const sel=$("fltProject"),cur=sel.value;
+  sel.innerHTML='<option value="">ทุกโครงการ</option>'+all.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join("");
+  sel.value=cur;
+}
 
-  let filtered = logs.filter(l=>{
-    if(project && l.project!==project) return false;
-    if(direction && l.direction!==direction) return false;
-    if(itemType && l.itemType!==itemType) return false;
-    if(status && l.status!==status) return false;
-    if(q){
-      const hay = [
-        l.internalName,l.internalSurname,l.externalName,l.notes,l.recordedBy,
-        (l.items||[]).map(i=>i.description).join(' ')
-      ].join(' ').toLowerCase();
-      if(!hay.includes(q)) return false;
-    }
+// ━━━ nav / filters ━━━
+function syncNav(active){ document.querySelectorAll(".nav .item").forEach(el=>el.classList.toggle("on",el.dataset.tab===active)); }
+function setTab(t){
+  tab=t;
+  syncNav(t);
+  render();
+}
+function setDir(el,d){ dirFilter=d; document.querySelectorAll(".chip.dc").forEach(c=>c.classList.toggle("on",c===el)); render(); }
+function setQuick(el,q){ if(quickFilter===q){quickFilter="";el.classList.remove("on");}else{quickFilter=q;document.querySelectorAll(".chip.qd").forEach(c=>c.classList.toggle("on",c===el));} render(); }
+function clearFilters(){
+  $("fltType").value="";$("fltFrom").value="";$("fltTo").value="";$("fltSort").value="new";$("fltSearch").value="";$("fltProject").value="";
+  dirFilter="";quickFilter="";
+  document.querySelectorAll(".chip.dc").forEach((c,i)=>c.classList.toggle("on",i===0));
+  document.querySelectorAll(".chip.qd").forEach(c=>c.classList.remove("on"));
+  render();
+}
+function getFiltered(){
+  const proj=$("fltProject").value, type=$("fltType").value, q=$("fltSearch").value.trim().toLowerCase();
+  const from=$("fltFrom").value?new Date($("fltFrom").value+"T00:00").getTime():null;
+  const to=$("fltTo").value?new Date($("fltTo").value+"T23:59").getTime():null;
+  const sort=$("fltSort").value;
+  let now=Date.now();
+  let list=logs.filter(l=>{
+    if(tab==="pending"&&l.status!=="pending")return false;
+    if(tab==="delivered"&&l.status!=="delivered")return false;
+    if(proj&&l.project!==proj)return false;
+    if(dirFilter&&l.direction!==dirFilter)return false;
+    if(type&&l.itemType!==type)return false;
+    const t=new Date(l.occurredAt||l.createdAt).getTime();
+    if(quickFilter==="today"){const d=new Date();d.setHours(0,0,0,0);if(t<d.getTime())return false;}
+    if(quickFilter==="7d"&&t<now-7*864e5)return false;
+    if(from&&t<from)return false;
+    if(to&&t>to)return false;
+    if(q){const hay=[l.internalName,l.internalSurname,l.externalName,l.notes,l.recordedBy,l.deliveredTo,(l.items||[]).map(i=>i.description).join(" ")].join(" ").toLowerCase();if(!hay.includes(q))return false;}
     return true;
   });
-
-  renderKPI(filtered);
-  renderCards(filtered);
+  list.sort((a,b)=>{const ta=new Date(a.occurredAt||a.createdAt).getTime(),tb=new Date(b.occurredAt||b.createdAt).getTime();return sort==="old"?ta-tb:tb-ta;});
+  return list;
 }
 
-function clearFilters(){
-  document.getElementById('fltProject').value='';
-  document.getElementById('fltDirection').value='';
-  document.getElementById('fltType').value='';
-  document.getElementById('fltStatus').value='';
-  document.getElementById('fltSearch').value='';
-  applyFilters();
-}
-
-function renderKPI(list){
-  const total = list.length;
-  const pending = list.filter(l=>l.status==='pending').length;
-  const inCount = list.filter(l=>l.direction==='in').length;
-  const outCount = list.filter(l=>l.direction==='out').length;
-  document.getElementById('kpiGrid').innerHTML = `
-    <div class="kpi-card blue"><div class="kpi-label">ทั้งหมด</div><div class="kpi-val">${total}</div></div>
-    <div class="kpi-card orange"><div class="kpi-label">รอรับ/รอส่งมอบ</div><div class="kpi-val">${pending}</div></div>
-    <div class="kpi-card green"><div class="kpi-label">รับเข้า ⬇</div><div class="kpi-val">${inCount}</div></div>
-    <div class="kpi-card purple"><div class="kpi-label">ส่งออก ⬆</div><div class="kpi-val">${outCount}</div></div>`;
-}
-
-const TYPE_LABEL = {parcel:'📦 พัสดุ', document:'📄 เอกสาร', key:'🔑 กุญแจ', sticker:'🏷️ สติ๊กเกอร์', keycard:'💳 คีย์การ์ด', accesscard:'🎫 บัตรผ่านเข้า-ออก'};
-
-function renderCards(list){
-  const grid = document.getElementById('cardGrid');
-  const noData = document.getElementById('noData');
-  document.getElementById('listCount').textContent = `${list.length} รายการ`;
-  if(!list.length){ grid.innerHTML=''; noData.style.display='block'; return; }
-  noData.style.display='none';
-
-  grid.innerHTML = list.map(l=>{
-    const personLabel = l.personType==='internal'
-      ? `${escapeHtml(l.internalName||'')} ${escapeHtml(l.internalSurname||'')} <span style="color:#94a3b8;font-weight:400">(${escapeHtml(l.internalDept||'-')})</span>`
-      : `${l.idCardPhotos&&l.idCardPhotos[0]?`<img class="lc-idthumb" src="${l.idCardPhotos[0].dataUrl}">`:''}${escapeHtml(l.externalName||'บุคคลภายนอก')}`;
-    const itemsSummary = (l.items||[]).map(i=>`${escapeHtml(i.description)}${i.qty?` x${escapeHtml(String(i.qty))}`:''}`).join(', ') || '-';
-    const dateStr = l.createdAt ? new Date(l.createdAt).toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'2-digit'}) : '';
-    return `
-    <div class="log-card dir-${l.direction} st-${l.status}" onclick="openModal('${l._id}')">
-      <div class="lc-top">
-        <div class="lc-project">${escapeHtml(l.project||'-')}</div>
-        <div class="chip chip-status-${l.status}">${l.status==='delivered'?'✅ ส่งมอบแล้ว':'⏳ รอรับ'}</div>
-      </div>
-      <div class="lc-chips">
-        <span class="chip chip-dir-${l.direction}">${l.direction==='in'?'⬇ รับเข้า':'⬆ ส่งออก'}</span>
-        <span class="chip chip-type">${TYPE_LABEL[l.itemType]||l.itemType}</span>
-        <span class="chip chip-person">${l.personType==='internal'?'🧑‍💼 พนักงาน':'👤 บุคคลภายนอก'}</span>
-      </div>
-      <div class="lc-person">${personLabel}</div>
-      <div class="lc-items">📋 ${itemsSummary}</div>
-      <div class="lc-foot">
-        <span>${dateStr} · ผู้บันทึก: ${escapeHtml(l.recordedBy||'-')}</span>
-      </div>
-      <div class="lc-actions" onclick="event.stopPropagation()">
-        ${l.status==='pending'?`<button class="action-btn btn-deliver" onclick="openDeliverModal('${l._id}')">✅ ส่งมอบแล้ว</button>`:''}
-        <button class="action-btn btn-edit" onclick="openModal('${l._id}')">✏️ แก้ไข</button>
-        <button class="action-btn btn-delete" onclick="deleteLogConfirm('${l._id}')">🗑 ลบ</button>
-      </div>
+// ━━━ render ━━━
+function render(){
+  const list=getFiltered();
+  const total=logs.length, pending=logs.filter(l=>l.status==="pending").length, delivered=logs.length-pending;
+  $("statLine").innerHTML=`แสดง <b>${list.length}</b> · ทั้งหมด <b>${total}</b> · ค้างอยู่ <b>${pending}</b> · ส่งมอบแล้ว <b>${delivered}</b>`;
+  const wrap=$("list");
+  if(!list.length){ wrap.innerHTML=`<div class="empty"><div class="e">📭</div><p>ยังไม่มีรายการในมุมมองนี้</p></div>`; return; }
+  wrap.innerHTML=list.map(l=>{
+    const locked=l.status==="delivered";
+    const who=l.personType==="internal"
+      ? `${esc(l.internalName||"")} ${esc(l.internalSurname||"")}`.trim()+` <span style="color:var(--muted);font-weight:300">· ${esc(l.internalDept||"-")}</span>`
+      : esc(l.externalName||"บุคคลภายนอก");
+    const items=(l.items||[]).map(i=>`${esc(i.description)}${i.qty?` ×${esc(String(i.qty))}`:""}`).join(" · ")||"-";
+    const th=[...(l.itemPhotos||[]),...(l.idCardPhotos||[])].slice(0,3).map(p=>`<img src="${esc(imgSrc(p))}">`).join("");
+    return `<div class="card ${locked?"done":""}" onclick="openDetail('${l._id}')">
+      <div class="c1"><span class="proj">${esc(l.project||"-")}</span>
+        <span class="st ${locked?"ok lock":"wait"}">${locked?"ส่งมอบแล้ว":"ค้างอยู่"}</span></div>
+      <div class="tags"><span class="tag ${l.direction}">${l.direction==="in"?"⬇ รับเข้า":"⬆ ส่งออก"}</span>
+        <span class="tag ty">${TYPE_LABEL[l.itemType]||l.itemType||""}</span>
+        <span class="tag pn">${l.personType==="internal"?"🧑‍💼 พนักงาน":"👤 ภายนอก"}</span></div>
+      <div class="who">${who}</div>
+      <div class="items">📋 ${items}</div>
+      ${th?`<div class="thumbs">${th}</div>`:""}
+      <div class="meta">🕐 ${fmtDate(l.occurredAt||l.createdAt)} · ✍️ ${esc(l.recordedBy||"-")}</div>
+      ${!locked?`<button class="deliver" onclick="event.stopPropagation();openDeliver('${l._id}')">✅ ส่งมอบแล้ว</button>
+        <div class="row-btns"><button onclick="event.stopPropagation();openRecord('${l._id}')">✏️ แก้ไข</button>
+        <button class="del" onclick="event.stopPropagation();delRecord('${l._id}')">🗑 ลบ</button></div>`:""}
     </div>`;
-  }).join('');
+  }).join("");
 }
 
-function escapeHtml(s){
-  return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
+// ━━━ sheets ━━━
+function openSheet(id){$(id).classList.add("open");}
+function closeSheet(id){$(id).classList.remove("open"); if(id==="expSheet")syncNav(tab);}
 
-// ━━━ MODAL: OPEN / CLOSE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function openModal(id){
-  editingId = id;
-  const log = id ? logs.find(l=>l._id===id) : null;
-  document.getElementById('modalTitle').textContent = log ? '✏️ แก้ไขรายการ' : '＋ บันทึกรายการใหม่';
+// ━━━ RECORD modal ━━━
+function setSeg(v){seg=v;$("segIn").className=v==="in"?"on-in":"";$("segOut").className=v==="out"?"on-out":"";}
+function setType(v){type=v;document.querySelectorAll("#typeGrid button").forEach(b=>b.classList.toggle("on",b.dataset.t===v));}
+function setPerson(v){person=v;$("ptIn").className=v==="internal"?"on":"";$("ptEx").className=v==="external"?"on":"";
+  $("internalBlock").style.display=v==="internal"?"":"none";$("externalBlock").style.display=v==="external"?"":"none";}
 
-  document.getElementById('fProject').value = log?.project || '';
-  document.getElementById('fRecordedBy').value = log?.recordedBy || '';
-  document.getElementById('fNotes').value = log?.notes || '';
-
-  document.getElementById('dirIn').checked = log?.direction==='in';
-  document.getElementById('dirOut').checked = log?.direction==='out';
-  document.getElementById('typeParcel').checked = log?.itemType==='parcel';
-  document.getElementById('typeDoc').checked = log?.itemType==='document';
-  document.getElementById('typeKey').checked = log?.itemType==='key';
-  document.getElementById('typeSticker').checked = log?.itemType==='sticker';
-  document.getElementById('typeKeycard').checked = log?.itemType==='keycard';
-  document.getElementById('typeAccess').checked = log?.itemType==='accesscard';
-
-  document.getElementById('ptInternal').checked = log?.personType==='internal';
-  document.getElementById('ptExternal').checked = log?.personType==='external';
-  document.getElementById('inName').value = log?.internalName || '';
-  document.getElementById('inSurname').value = log?.internalSurname || '';
-  document.getElementById('inPhone').value = log?.internalPhone || '';
-  document.getElementById('inDept').value = log?.internalDept || '';
-  document.getElementById('exName').value = log?.externalName || '';
-  togglePersonType();
-
-  modalPhotos = log?.idCardPhotos ? [...log.idCardPhotos] : [];
-  renderIdPhotos();
-
-  modalItems = log?.items ? JSON.parse(JSON.stringify(log.items)) : [];
-  if(!modalItems.length) modalItems.push({description:'', qty:''});
+function openRecord(id){
+  editId=id; const l=id?logs.find(x=>x._id===id):null;
+  if(l&&l.status==="delivered"){ toast("🔒 รายการส่งมอบแล้ว แก้ไม่ได้"); return; }
+  $("recTitle").textContent=l?"แก้ไขรายการ":"บันทึกรายการใหม่";
+  $("rProject").value=l?.project||"";
+  $("rOccurred").value=isoToLocal(l?.occurredAt);
+  setSeg(l?.direction||""); setType(l?.itemType||""); setPerson(l?.personType||"");
+  $("rInName").value=l?.internalName||"";$("rInSurname").value=l?.internalSurname||"";
+  $("rInPhone").value=l?.internalPhone||"";$("rInDept").value=l?.internalDept||"";
+  $("rExName").value=l?.externalName||"";
+  $("rNotes").value=l?.notes||"";
+  $("rRecordedBy").value=l?.recordedBy||localStorage.getItem(RECBY_KEY)||"";
+  mItem=l?.itemPhotos?l.itemPhotos.map(p=>({...p})):[];
+  mId=l?.idCardPhotos?l.idCardPhotos.map(p=>({...p})):[];
+  renderPhotos();
+  mItems=l?.items?JSON.parse(JSON.stringify(l.items)):[{description:"",qty:""}];
+  if(!mItems.length)mItems=[{description:"",qty:""}];
   renderItemRows();
-
-  document.getElementById('modalOverlay').style.display = 'flex';
-}
-function closeModal(){
-  document.getElementById('modalOverlay').style.display = 'none';
-  editingId = null; modalItems = []; modalPhotos = [];
-}
-function toggleDirection(){ /* visual only, kept for future hooks */ }
-function togglePersonType(){
-  const isInternal = document.getElementById('ptInternal').checked;
-  const isExternal = document.getElementById('ptExternal').checked;
-  document.getElementById('internalFields').style.display = isInternal ? 'block' : 'none';
-  document.getElementById('externalFields').style.display = isExternal ? 'block' : 'none';
+  openSheet("recSheet");
 }
 
-// ━━━ ITEM ROWS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// photo add + resize
+function addPhoto(e,kind){
+  const f=e.target.files[0]; e.target.value=""; if(!f)return;
+  const arr=kind==="id"?mId:mItem, max=kind==="id"?2:3;
+  if(arr.length>=max){ toast(`แนบได้สูงสุด ${max} รูป`); return; }
+  const rd=new FileReader();
+  rd.onload=ev=>{const im=new Image();im.onload=()=>{
+    const c=document.createElement("canvas"),M=1100;let w=im.width,h=im.height;
+    if(w>M){h=Math.round(h*M/w);w=M;}if(h>M){w=Math.round(w*M/h);h=M;}
+    c.width=w;c.height=h;c.getContext("2d").drawImage(im,0,0,w,h);
+    const dataUrl=c.toDataURL("image/jpeg",0.65);
+    // push ทันทีด้วย dataUrl (validation ผ่านเลย ไม่ต้องรอ toBlob) แล้วเติม blob เมื่อพร้อม
+    const entry={dataUrl,blob:null,addedAt:new Date().toISOString()};
+    arr.push(entry); renderPhotos();
+    c.toBlob(bl=>{entry.blob=bl;},"image/jpeg",0.65);
+  };im.src=ev.target.result;};
+  rd.readAsDataURL(f);
+}
+function renderPhotos(){
+  $("itemPhotoGrid").innerHTML=mItem.map((p,i)=>`<div class="pthumb"><img src="${esc(imgSrc(p))}" onclick="viewImg('${esc(imgSrc(p))}')"><button class="x" onclick="delPhoto('item',${i})">✕</button></div>`).join("");
+  $("idPhotoGrid").innerHTML=mId.map((p,i)=>`<div class="pthumb"><img src="${esc(imgSrc(p))}" onclick="viewImg('${esc(imgSrc(p))}')"><button class="x" onclick="delPhoto('id',${i})">✕</button></div>`).join("");
+}
+function delPhoto(kind,i){(kind==="id"?mId:mItem).splice(i,1);renderPhotos();}
+
 function renderItemRows(){
-  const wrap = document.getElementById('itemRows');
-  if(!modalItems.length){ wrap.innerHTML = '<div class="item-empty">ยังไม่มีรายการ กด "＋ เพิ่มรายการ"</div>'; return; }
-  wrap.innerHTML = modalItems.map((it,i)=>`
-    <div class="item-row">
-      <input type="text" placeholder="รายการของ เช่น กล่องพัสดุ Shopee" value="${escapeHtml(it.description)}" oninput="updateItemRow(${i},'description',this.value)">
-      <input type="text" class="qty" placeholder="จำนวน" value="${escapeHtml(it.qty)}" oninput="updateItemRow(${i},'qty',this.value)">
-      <button type="button" onclick="removeItemRow(${i})" title="ลบรายการ">✕</button>
-    </div>`).join('');
+  $("itemRows").innerHTML=mItems.map((it,i)=>`<div class="irow">
+    <input class="desc" placeholder="รายการของ เช่น กล่องพัสดุ" value="${esc(it.description)}" oninput="mItems[${i}].description=this.value">
+    <input class="qty" placeholder="จำนวน" value="${esc(it.qty)}" oninput="mItems[${i}].qty=this.value">
+    <button onclick="rmItemRow(${i})">✕</button></div>`).join("");
 }
-function addItemRow(){ modalItems.push({description:'', qty:''}); renderItemRows(); }
-function updateItemRow(i,field,val){ modalItems[i][field]=val; }
-function removeItemRow(i){ modalItems.splice(i,1); renderItemRows(); }
+function addItemRow(){mItems.push({description:"",qty:""});renderItemRows();}
+function rmItemRow(i){mItems.splice(i,1);if(!mItems.length)mItems=[{description:"",qty:""}];renderItemRows();}
 
-// ━━━ ID CARD PHOTO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function renderIdPhotos(){
-  const grid = document.getElementById('idPhotoGrid');
-  const thumbs = modalPhotos.map((p,i)=>`<div class="photo-thumb"><img src="${p.dataUrl}" onclick="viewPhoto('${p.dataUrl}');event.stopPropagation()"><button class="photo-del" onclick="deleteIdPhoto(${i});event.stopPropagation()">✕</button></div>`).join('');
-  const addBtn = modalPhotos.length<4 ? `<div class="photo-add" onclick="document.getElementById('idPhotoInput').click()">📷</div>` : '';
-  grid.innerHTML = thumbs+addBtn;
-}
-function handleIdPhotoAdd(e){
-  const file = e.target.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ev=>{
-    const img = new Image();
-    img.onload = ()=>{
-      const canvas = document.createElement('canvas'); const MAX = 1100;
-      let w=img.width, h=img.height;
-      if(w>MAX){ h=Math.round(h*MAX/w); w=MAX; }
-      if(h>MAX){ w=Math.round(w*MAX/h); h=MAX; }
-      canvas.width=w; canvas.height=h;
-      canvas.getContext('2d').drawImage(img,0,0,w,h);
-      const dataUrl = canvas.toDataURL('image/jpeg',0.65);
-      modalPhotos.push({dataUrl, name:file.name, addedAt:new Date().toISOString()});
-      renderIdPhotos();
-      showToast('📷 เพิ่มรูปบัตรแล้ว');
+async function saveRecord(){
+  const project=$("rProject").value.trim();
+  if(!project)return toast("⚠️ ระบุโครงการ");
+  if(!$("rOccurred").value)return toast("⚠️ ระบุวันเวลาที่รับ-ส่ง");
+  if(!seg)return toast("⚠️ เลือกทิศทาง");
+  if(!type)return toast("⚠️ เลือกประเภทของ");
+  if(!mItem.length)return toast("⚠️ ถ่ายรูปพัสดุอย่างน้อย 1 รูป");
+  if(!person)return toast("⚠️ เลือกผู้เกี่ยวข้อง");
+  let inName="",inSur="",inPhone="",inDept="",exName="";
+  if(person==="internal"){
+    inName=$("rInName").value.trim();inSur=$("rInSurname").value.trim();
+    inPhone=$("rInPhone").value.trim();inDept=$("rInDept").value.trim();
+    if(!inName||!inSur||!inPhone||!inDept)return toast("⚠️ กรอกชื่อ/นามสกุล/เบอร์/แผนกให้ครบ");
+  }else{
+    exName=$("rExName").value.trim();
+    if(!mId.length)return toast("⚠️ แนบรูปบัตรประชาชนอย่างน้อย 1 รูป");
+  }
+  const items=mItems.filter(i=>i.description&&i.description.trim());
+  if(!items.length)return toast("⚠️ ระบุรายการของอย่างน้อย 1 รายการ");
+  const recordedBy=$("rRecordedBy").value.trim();
+  if(!recordedBy)return toast("⚠️ ระบุผู้บันทึก");
+
+  const btn=$("recSaveBtn"); btn.disabled=true; btn.textContent="กำลังบันทึก...";
+  try{
+    const now=new Date().toISOString();
+    const existing=editId?logs.find(l=>l._id===editId):null;
+    const recordId=editId||(USE_FIREBASE&&db?db.collection(COLLECTION).doc().id:"local_"+Date.now()+"_"+Math.random().toString(36).slice(2,7));
+    const itemPhotos=await processPhotos(recordId,"item",mItem);
+    const idCardPhotos=person==="external"?await processPhotos(recordId,"idcard",mId):[];
+    const data={
+      occurredAt:localToIso($("rOccurred").value),
+      project,direction:seg,itemType:type,personType:person,
+      status:existing?.status||"pending",
+      internalName:inName,internalSurname:inSur,internalPhone:inPhone,internalDept:inDept,
+      externalName:exName,idCardPhotos,itemPhotos,items,
+      notes:$("rNotes").value.trim(),recordedBy,
+      createdAt:existing?.createdAt||now,updatedAt:now,
+      receiveSignature:existing?.receiveSignature||null,
+      deliveredAt:existing?.deliveredAt||null,deliveredTo:existing?.deliveredTo||null,
+      deliverSignature:existing?.deliverSignature||null
     };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-  e.target.value = '';
-}
-function deleteIdPhoto(i){ modalPhotos.splice(i,1); renderIdPhotos(); }
-function viewPhoto(url){
-  const ov = document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
-  const img = document.createElement('img'); img.src=url; img.style.cssText='max-width:90vw;max-height:90vh;border-radius:8px';
-  ov.appendChild(img); ov.onclick=()=>document.body.removeChild(ov); document.body.appendChild(ov);
-}
-
-// ━━━ SAVE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function saveLog(){
-  const project = document.getElementById('fProject').value.trim();
-  const direction = document.querySelector('input[name="direction"]:checked')?.value;
-  const itemType = document.querySelector('input[name="itemType"]:checked')?.value;
-  const personType = document.querySelector('input[name="personType"]:checked')?.value;
-
-  if(!project){ showToast('⚠️ กรุณาระบุโครงการ'); return; }
-  if(!direction){ showToast('⚠️ กรุณาเลือกทิศทาง รับเข้า/ส่งออก'); return; }
-  if(!itemType){ showToast('⚠️ กรุณาเลือกประเภทของที่รับ-ส่ง'); return; }
-  if(!personType){ showToast('⚠️ กรุณาเลือกประเภทบุคคล'); return; }
-
-  const cleanItems = modalItems.filter(i=>i.description && i.description.trim());
-  if(!cleanItems.length){ showToast('⚠️ กรุณาระบุรายการของอย่างน้อย 1 รายการ'); return; }
-
-  let internalName='', internalSurname='', internalPhone='', internalDept='', externalName='';
-  if(personType==='internal'){
-    internalName = document.getElementById('inName').value.trim();
-    internalSurname = document.getElementById('inSurname').value.trim();
-    internalPhone = document.getElementById('inPhone').value.trim();
-    internalDept = document.getElementById('inDept').value.trim();
-    if(!internalName||!internalSurname||!internalPhone||!internalDept){
-      showToast('⚠️ กรุณากรอกชื่อ นามสกุล เบอร์โทร แผนก ให้ครบ'); return;
+    if(USE_FIREBASE&&db){
+      await db.collection(COLLECTION).doc(recordId).set(data,{merge:true});
     }
-  } else {
-    externalName = document.getElementById('exName').value.trim();
-    if(!modalPhotos.length){ showToast('⚠️ กรุณาแนบรูปบัตรประชาชนอย่างน้อย 1 รูป'); return; }
-  }
-
-  const now = new Date().toISOString();
-  const existing = editingId ? logs.find(l=>l._id===editingId) : null;
-
-  const data = {
-    project, direction, itemType, personType,
-    status: existing?.status || 'pending',
-    internalName, internalSurname, internalPhone, internalDept,
-    externalName, idCardPhotos: personType==='external' ? modalPhotos : [],
-    items: cleanItems,
-    notes: document.getElementById('fNotes').value.trim(),
-    recordedBy: document.getElementById('fRecordedBy').value.trim(),
-    createdAt: existing?.createdAt || now,
-    updatedAt: now,
-    deliveredAt: existing?.deliveredAt || null,
-    deliveredTo: existing?.deliveredTo || null
-  };
-
-  if(editingId){
-    const idx = logs.findIndex(l=>l._id===editingId);
-    logs[idx] = {...logs[idx], ...data};
-    await persistLog(logs[idx]);
-  } else {
-    const newId = await persistLog({_id:null, ...data});
-    logs.unshift({_id:newId, ...data});
-    if(!(USE_FIREBASE&&db)) saveLocal();
-  }
-
-  closeModal();
-  refreshProjectList();
-  applyFilters();
-  showToast(editingId?'✅ บันทึกการแก้ไขแล้ว':'✅ เพิ่มรายการใหม่แล้ว');
+    if(editId){const idx=logs.findIndex(l=>l._id===editId);logs[idx]={_id:recordId,...data};}
+    else{logs.unshift({_id:recordId,...data});}
+    if(!(USE_FIREBASE&&db))saveLocal();
+    localStorage.setItem(RECBY_KEY,recordedBy);
+    closeSheet("recSheet"); refreshProjects(); render();
+    toast(editId?"✅ แก้ไขแล้ว":"✅ บันทึกรายการใหม่แล้ว");
+  }catch(e){ console.error("save failed",e); toast("❌ บันทึกไม่สำเร็จ: "+(e.message||e)); }
+  finally{ btn.disabled=false; btn.textContent="บันทึกรายการ"; }
 }
 
-// ━━━ DELETE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function deleteLogConfirm(id){
-  if(!confirm('ยืนยันลบรายการนี้?')) return;
-  await removeLog(id);
-  applyFilters();
-  showToast('🗑 ลบรายการแล้ว');
+async function delRecord(id){
+  const l=logs.find(x=>x._id===id);
+  if(l&&l.status==="delivered")return toast("🔒 รายการส่งมอบแล้ว ลบไม่ได้");
+  if(!confirm("ยืนยันลบรายการนี้? (ลบรูปที่แนบด้วย)"))return;
+  try{
+    if(USE_FIREBASE&&db){
+      if(storage){for(const p of [...(l.itemPhotos||[]),...(l.idCardPhotos||[])]){if(p.storagePath){try{await storage.ref().child(p.storagePath).delete();}catch(_){}}}}
+      await db.collection(COLLECTION).doc(id).delete();
+    }
+    logs=logs.filter(x=>x._id!==id);
+    if(!(USE_FIREBASE&&db))saveLocal();
+    render(); toast("🗑 ลบแล้ว");
+  }catch(e){console.error(e);toast("❌ ลบไม่สำเร็จ");}
 }
 
-// ━━━ DELIVER STATUS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function openDeliverModal(id){
-  deliverTargetId = id;
-  document.getElementById('deliverTo').value = '';
-  document.getElementById('deliverOverlay').style.display = 'flex';
-}
-function closeDeliverModal(){
-  document.getElementById('deliverOverlay').style.display = 'none';
-  deliverTargetId = null;
+// ━━━ DELIVER ━━━
+function openDeliver(id){
+  const l=logs.find(x=>x._id===id); if(!l)return;
+  if(l.status==="delivered")return toast("รายการนี้ส่งมอบแล้ว");
+  delId=id; $("dTo").value=""; $("dOccurred").value=nowLocal();
+  openSheet("delSheet");
 }
 async function confirmDeliver(){
-  const to = document.getElementById('deliverTo').value.trim();
-  if(!to){ showToast('⚠️ กรุณาระบุชื่อผู้รับมอบ'); return; }
-  const idx = logs.findIndex(l=>l._id===deliverTargetId);
-  if(idx<0) return;
-  logs[idx].status = 'delivered';
-  logs[idx].deliveredAt = new Date().toISOString();
-  logs[idx].deliveredTo = to;
-  logs[idx].updatedAt = new Date().toISOString();
-  await persistLog(logs[idx]);
-  closeDeliverModal();
-  applyFilters();
-  showToast('✅ บันทึกการส่งมอบแล้ว');
+  const to=$("dTo").value.trim();
+  if(!to)return toast("⚠️ ระบุชื่อผู้รับมอบ");
+  if(!$("dOccurred").value)return toast("⚠️ ระบุวันเวลาที่ส่งมอบ");
+  if(SIGNATURE_READY){ /* TODO: บังคับลายเซ็นเมื่อ pad พร้อม */ }
+  const idx=logs.findIndex(l=>l._id===delId); if(idx<0)return;
+  try{
+    const patch={status:"delivered",deliveredTo:to,deliveredAt:localToIso($("dOccurred").value),
+      occurredAt:logs[idx].occurredAt,updatedAt:new Date().toISOString(),deliverSignature:null};
+    if(USE_FIREBASE&&db){ await db.collection(COLLECTION).doc(delId).set(patch,{merge:true}); }
+    logs[idx]={...logs[idx],...patch};
+    if(!(USE_FIREBASE&&db))saveLocal();
+    closeSheet("delSheet"); render(); toast("✅ ส่งมอบแล้ว · ล็อกรายการ");
+  }catch(e){console.error(e);toast("❌ ไม่สำเร็จ: "+(e.message||e));}
 }
 
-// ━━━ TOAST ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-let toastTimer = null;
-function showToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>t.classList.remove('show'), 2400);
+// ━━━ DETAIL ━━━
+function openDetail(id){
+  const l=logs.find(x=>x._id===id); if(!l)return;
+  const row=(k,v)=>`<div class="dl-row"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+  const who=l.personType==="internal"
+    ? `${esc(l.internalName||"")} ${esc(l.internalSurname||"")} (${esc(l.internalDept||"-")}) · ☎ ${esc(l.internalPhone||"-")}`
+    : esc(l.externalName||"บุคคลภายนอก");
+  const items=(l.items||[]).map(i=>`${esc(i.description)}${i.qty?` ×${esc(String(i.qty))}`:""}`).join("<br>")||"-";
+  const gallery=t=>t.length?`<div class="dl-imgs">${t.map(p=>`<img src="${esc(imgSrc(p))}" onclick="viewImg('${esc(imgSrc(p))}')">`).join("")}</div>`:"<span style='color:var(--muted)'>—</span>";
+  let h=row("โครงการ",esc(l.project||"-"))
+    +row("สถานะ",l.status==="delivered"?"✅ ส่งมอบแล้ว 🔒":"⏳ ค้างอยู่")
+    +row("ทิศทาง",l.direction==="in"?"⬇ รับเข้า":"⬆ ส่งออก")
+    +row("ประเภท",TYPE_LABEL[l.itemType]||l.itemType||"-")
+    +row("ผู้เกี่ยวข้อง",who)
+    +row("วันเวลารับ-ส่ง",fmtDate(l.occurredAt||l.createdAt))
+    +row("ผู้บันทึก",esc(l.recordedBy||"-"));
+  if(l.status==="delivered")h+=row("ส่งมอบให้",esc(l.deliveredTo||"-"))+row("เมื่อ",fmtDate(l.deliveredAt));
+  h+=`<label class="flabel">รายการของ</label><div class="items" style="font-size:13px">${items}</div>`;
+  h+=`<label class="flabel">รูปพัสดุ/ของ</label>${gallery(l.itemPhotos||[])}`;
+  if(l.personType==="external")h+=`<label class="flabel">รูปบัตรประชาชน 🔒</label>${gallery(l.idCardPhotos||[])}`;
+  if(l.notes)h+=`<label class="flabel">หมายเหตุ</label><div class="items" style="font-size:13px">${esc(l.notes)}</div>`;
+  h+=`<button class="fsave" style="background:#7a3d1f" onclick="printSlip('${l._id}')">🖨️ พิมพ์ใบรับ-ส่ง (PDF)</button>`;
+  if(l.status!=="delivered")h+=`<button class="iadd" style="margin-top:10px" onclick="closeSheet('detSheet');openRecord('${l._id}')">✏️ แก้ไขรายการ</button>`;
+  $("detBody").innerHTML=h;
+  openSheet("detSheet");
+}
+
+// ━━━ image viewer ━━━
+function viewImg(src){if(!src)return;const v=document.createElement("div");v.className="viewer";v.innerHTML=`<img src="${src}">`;v.onclick=()=>v.remove();document.body.appendChild(v);}
+
+// ━━━ EXPORT ━━━
+function openExport(){ $("expCount").textContent=getFiltered().length; syncNav("report"); openSheet("expSheet"); }
+function exportExcel(){
+  const list=getFiltered();
+  if(!list.length)return toast("ไม่มีรายการให้ส่งออก");
+  const rows=list.map(l=>({
+    "วันเวลารับ-ส่ง":fmtDate(l.occurredAt||l.createdAt),"โครงการ":l.project||"",
+    "ทิศทาง":l.direction==="in"?"รับเข้า":"ส่งออก","ประเภท":(TYPE_LABEL[l.itemType]||"").replace(/[^฀-๿a-zA-Z ]/g,"").trim(),
+    "สถานะ":l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่",
+    "ผู้เกี่ยวข้อง":l.personType==="internal"?`${l.internalName||""} ${l.internalSurname||""} (${l.internalDept||""})`:(l.externalName||"บุคคลภายนอก"),
+    "เบอร์โทร":l.internalPhone||"","รายการของ":(l.items||[]).map(i=>`${i.description}${i.qty?" x"+i.qty:""}`).join(", "),
+    "ผู้บันทึก":l.recordedBy||"","ส่งมอบให้":l.deliveredTo||"","วันที่ส่งมอบ":l.deliveredAt?fmtDate(l.deliveredAt):"","หมายเหตุ":l.notes||""
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"รับ-ส่งของ");
+  XLSX.writeFile(wb,`handover_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast("📊 ดาวน์โหลด Excel แล้ว");
+}
+function exportPdfReport(){
+  const list=getFiltered();
+  if(!list.length)return toast("ไม่มีรายการให้ส่งออก");
+  const rows=list.map((l,i)=>`<tr><td>${i+1}</td><td>${esc(fmtDay(l.occurredAt||l.createdAt))}</td><td>${esc(l.project||"")}</td>
+    <td>${l.direction==="in"?"รับเข้า":"ส่งออก"}</td><td>${esc((TYPE_LABEL[l.itemType]||"").replace(/[^฀-๿ ]/g,"").trim())}</td>
+    <td>${esc(l.personType==="internal"?`${l.internalName||""} ${l.internalSurname||""}`:(l.externalName||"ภายนอก"))}</td>
+    <td>${esc((l.items||[]).map(x=>`${x.description}${x.qty?" ×"+x.qty:""}`).join(", "))}</td>
+    <td>${l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่"}</td><td>${esc(l.recordedBy||"")}</td></tr>`).join("");
+  $("printArea").innerHTML=`<div class="pr-wrap"><div class="pr-h"><h1>รายงานการรับ-ส่ง พัสดุ/เอกสาร/กุญแจ</h1>
+    <p>พิมพ์เมื่อ ${fmtDate(new Date().toISOString())} · รวม ${list.length} รายการ</p></div>
+    <table class="pr-t"><thead><tr><th>#</th><th>วันที่</th><th>โครงการ</th><th>ทิศทาง</th><th>ประเภท</th><th>ผู้เกี่ยวข้อง</th><th>รายการของ</th><th>สถานะ</th><th>ผู้บันทึก</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  window.print();
+}
+function printSlip(id){
+  const l=logs.find(x=>x._id===id); if(!l)return;
+  const items=(l.items||[]).map(i=>`${esc(i.description)}${i.qty?` ×${esc(String(i.qty))}`:""}`).join(", ")||"-";
+  const who=l.personType==="internal"?`${esc(l.internalName||"")} ${esc(l.internalSurname||"")} (${esc(l.internalDept||"-")})`:esc(l.externalName||"บุคคลภายนอก");
+  const imgs=(l.itemPhotos||[]).map(p=>`<img src="${esc(imgSrc(p))}">`).join("");
+  const dsig=l.deliverSignature?`<img src="${esc(imgSrc(l.deliverSignature))}">`:`<div class="line">ลงชื่อผู้รับมอบ</div>`;
+  $("printArea").innerHTML=`<div class="pr-wrap"><div class="pr-slip">
+    <h2>ใบรับ-ส่ง ${l.direction==="in"?"(รับเข้า)":"(ส่งออก)"} · ${esc(l.project||"")}</h2>
+    <div class="g">
+      <div><b>ประเภท:</b> ${esc((TYPE_LABEL[l.itemType]||"").replace(/[^฀-๿ ]/g,"").trim())}</div>
+      <div><b>สถานะ:</b> ${l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่"}</div>
+      <div><b>วันเวลารับ-ส่ง:</b> ${esc(fmtDate(l.occurredAt||l.createdAt))}</div>
+      <div><b>ผู้บันทึก:</b> ${esc(l.recordedBy||"-")}</div>
+      <div style="grid-column:1/-1"><b>ผู้เกี่ยวข้อง:</b> ${who}</div>
+      <div style="grid-column:1/-1"><b>รายการของ:</b> ${items}</div>
+      ${l.notes?`<div style="grid-column:1/-1"><b>หมายเหตุ:</b> ${esc(l.notes)}</div>`:""}
+      ${l.status==="delivered"?`<div><b>ส่งมอบให้:</b> ${esc(l.deliveredTo||"-")}</div><div><b>เมื่อ:</b> ${esc(fmtDate(l.deliveredAt))}</div>`:""}
+    </div>
+    ${imgs?`<div class="imgs">${imgs}</div>`:""}
+    <div class="sig"><div class="box"><div class="line">ลงชื่อผู้ส่งมอบ</div></div><div class="box">${dsig}<div>ผู้รับมอบ</div></div></div>
+  </div></div>`;
+  window.print();
 }
 </script>
 </body>
