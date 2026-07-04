@@ -12,6 +12,28 @@ Plue ต้องการแอปใหม่สำหรับบันทึ
 
 Repo นี้ (`Retail Dash Broad`) เป็น static HTML/JS app อยู่แล้ว ใช้ Firebase Hosting + Firestore (ปัจจุบัน config เป็น placeholder ยังไม่เปิดใช้งานจริง) โปรเจกต์ Firebase คือ `retail-mom-app` (`.firebaserc`). งานนี้จะเพิ่มโมดูลใหม่โดยเดินตามแพทเทิร์นเดิมของ `Retail_Dashboard_2025.html` แทนที่จะสร้างสแตกใหม่ เพื่อให้ deploy ผ่าน Firebase Hosting เดิมได้ทันที และคุ้นเคยง่ายสำหรับ maintenance ต่อ.
 
+## 🔎 Plan Review (2026-07-04) — audit เทียบของจริงที่สร้าง + deploy + test สด
+
+> รีวิวผ่านเลนส์ p-sieve-code + p-architecture. Architecture 8.0/10 · ROI 9.0/10.
+> integrity decisions (7/8/10) แข็งแรงมาก ผ่านทดสอบสดกับ Firebase จริง. จุดพังจริง = ADR-001 (รูปบัตร).
+
+| # | Verdict | สถานะ/การแก้ |
+|---|---|---|
+| 1 Passcode | ⚠️ เหตุผลแก้แล้ว | **passcode = UX gate ไม่ใช่ data protection** (BUG-2 พิสูจน์ว่า anon อ่าน Firestore ตรงได้). PDPA กันที่ CF (ADR-002) |
+| 2 Anon Auth | ⚠️ เหตุผลแก้แล้ว | `read:if auth` = "อ่านได้ทุกคนที่ยอม anon sign-in" — พอสำหรับ log ทั่วไป, **ห้ามใช้กับรูปบัตร** → ADR-002 |
+| 3 รูป→Storage | ✅ ถูก | verified สด (item photo → url, ไม่ใช่ base64) |
+| 4 PDPA delete | ✅ (หลังแก้ BUG-11) | ลบ storage เคยพัง (write rule กับ null resource) → guard แล้ว |
+| 5/6/11 | ✅ ถูก | project list / status labels / date filter — ไม่มีปัญหา |
+| 7 recordedBy required | ✅ แกร่งขึ้น | บังคับที่ server (rules) verified DENIED เมื่อว่าง |
+| 8 itemPhotos ≥1 | ✅ แกร่งขึ้น | server-enforced create+update verified |
+| 9 createdAt ล็อก | ✅ **แก้แล้ว** | เพิ่ม rule `createdAt == resource.data.createdAt` (invariant audit) verified DENIED |
+| 10 ล็อก delivered | ✅ ดาวเด่น | verified: update/delete บน delivered ถูกปฏิเสธจริง |
+| 12 Export PDF | ⚠️ tool แก้แล้ว | jsPDF render ไทยไม่ได้ → **browser-print** (intent 2 แบบคงไว้) |
+| 13/14 signature | ✅ **แก้แล้ว** | เขียน canvas signature pad เอง (ไม่รอ repo) · บังคับเซ็นตอนส่งมอบ · verified upload Storage |
+| 15 UI | ✅→เปลี่ยน | Warm → Calm Soft (neumorphic เสจ) |
+| 16 Offline | ✅ **แก้แล้ว** | เปิด `enablePersistence()` + block บันทึกตอน offline verified |
+| **ADR-001** | ❌ **ถูกแทนด้วย [ADR-002](docs/ADR-002-idcard-cloud-function.md)** | รูปบัตร client-only ทำไม่ได้ (BUG-1+BUG-2) → Cloud Function |
+
 ## Design decisions (grilling session · 2026-07-02)
 1. **Access gate**: ไม่มี login user จริง แต่ใส่ **shared passcode 1 ชั้น** ก่อนเข้าแอป (เก็บใน sessionStorage) เพื่อกันคนนอกที่บังเอิญเจอ URL เปิดดู/โหลดรูปบัตรประชาชน — ลดความเสี่ยง PDPA โดยยังกรอกข้อมูลได้เร็วหน้างาน
 2. **Firestore rules**: บังคับผ่าน **Firebase Anonymous Auth** ก่อนอ่าน/เขียน (`allow read, write: if request.auth != null`) — กันการยิง API มั่วจากภายนอกระดับหนึ่ง โดย user ไม่ต้อง login เอง (แอป sign-in anonymous ให้เงียบๆ). ยอมรับว่า passcode เป็น client-side gate กันคนทั่วไปได้ ~95% ไม่กันมือโปร 100% — เพียงพอสำหรับ internal tool เฟสแรก

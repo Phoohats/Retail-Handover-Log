@@ -26,7 +26,8 @@ service cloud.firestore {
         && request.resource.data.recordedBy is string
         && request.resource.data.recordedBy.size() > 0
         && request.resource.data.itemPhotos is list
-        && request.resource.data.itemPhotos.size() >= 1;
+        && request.resource.data.itemPhotos.size() >= 1
+        && request.resource.data.createdAt == resource.data.createdAt;   // audit: กัน mutate createdAt
     }
   }
 }

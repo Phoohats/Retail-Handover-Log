@@ -9,6 +9,7 @@
       "HANDOFF.md",
       "README.md",
       "design/**",
+      "docs/**",
       "reports/**",
       "versions/**",
       "functions/**"
