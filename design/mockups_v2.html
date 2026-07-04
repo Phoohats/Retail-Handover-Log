@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Handover Log — Mockups v2 · 6 ทิศทางใหม่</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;500;600;700&family=Prompt:wght@300;400;500;600&family=Chakra+Petch:wght@400;500;600;700&family=Trirong:wght@300;400;500;600&family=Baloo+Thai+2:wght@500;600;700;800&family=Kanit:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1b1d22;color:#e8e6e1;font-family:'Prompt',sans-serif;padding:40px 20px 80px}
+.wrap{max-width:1200px;margin:0 auto}
+.page-head{text-align:center;margin-bottom:8px}
+.page-head h1{font-family:'Kanit';font-weight:600;font-size:28px;background:linear-gradient(90deg,#ff9a62,#ffd400,#35e0c8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.page-head p{color:#9a978f;font-size:14px;margin-top:8px;font-weight:300}
+.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:40px 30px;margin-top:40px;justify-items:center}
+.slot{display:flex;flex-direction:column;align-items:center;max-width:330px}
+.tagrow{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.tagnum{width:26px;height:26px;border-radius:50%;background:#2c2f36;display:flex;align-items:center;justify-content:center;font-family:'DM Mono';font-size:13px;color:#ffd400;flex-shrink:0}
+.tagname{font-family:'Kanit';font-weight:500;font-size:16px;color:#fff}
+.slot .why{font-size:12.5px;color:#9a978f;font-weight:300;margin-top:14px;line-height:1.6;text-align:center;max-width:300px}
+.slot .why b{color:#cbc8c1;font-weight:400}
+
+/* ===== PHONE SHELL ===== */
+.phone{width:300px;height:600px;border-radius:36px;padding:9px;background:#0a0b0d;box-shadow:0 0 0 2px #34373d,0 30px 60px rgba(0,0,0,.5);position:relative;flex-shrink:0}
+.phone::before{content:'';position:absolute;top:18px;left:50%;transform:translateX(-50%);width:84px;height:18px;background:#0a0b0d;border-radius:0 0 12px 12px;z-index:30}
+.screen{width:100%;height:100%;border-radius:28px;overflow:hidden;position:relative}
+.scroll{position:absolute;inset:0 0 72px 0;overflow:hidden}
+.nav{position:absolute;bottom:0;left:0;right:0;height:72px;display:flex;align-items:center}
+
+/* generic bits reused, themed per mockup */
+.hd{padding:40px 16px 14px}
+.chips{display:flex;gap:7px;padding:12px 14px 4px;flex-wrap:wrap}
+.list{padding:8px 14px}
+.emoji{font-style:normal}
+
+/* ============================================================
+   M1 · SAFETY OPS — neo-brutalist, safety yellow/black
+   ============================================================ */
+.m1 .screen{background:#f4f2ea;font-family:'Bai Jamjuree',sans-serif}
+.m1 .hd{background:#ffd400;border-bottom:3px solid #111}
+.m1 .hd h1{font-size:19px;font-weight:700;color:#111;letter-spacing:-.02em;text-transform:uppercase}
+.m1 .hd p{font-size:11px;font-weight:500;color:#111;opacity:.7;margin-top:2px}
+.m1 .proj{margin-top:11px;background:#111;color:#ffd400;padding:9px 12px;font-weight:600;font-size:12px;display:flex;justify-content:space-between}
+.m1 .chip{font-size:11px;font-weight:600;padding:7px 12px;background:#fff;border:2px solid #111;color:#111}
+.m1 .chip.on{background:#111;color:#ffd400}
+.m1 .card{background:#fff;border:3px solid #111;box-shadow:5px 5px 0 #111;padding:12px;margin-bottom:14px}
+.m1 .c1{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.m1 .proj2{font-size:10px;font-weight:700;text-transform:uppercase;color:#111}
+.m1 .st{font-size:9px;font-weight:700;padding:3px 8px;text-transform:uppercase;border:2px solid #111}
+.m1 .st.wait{background:#ffd400}
+.m1 .st.ok{background:#111;color:#ffd400}
+.m1 .tags{display:flex;gap:5px;margin-bottom:7px}
+.m1 .tag{font-size:9px;font-weight:600;padding:3px 7px;border:2px solid #111;background:#f4f2ea}
+.m1 .who{font-size:15px;font-weight:700;color:#111}
+.m1 .items{font-size:10.5px;color:#555;font-weight:500;margin-top:2px}
+.m1 .deliver{margin-top:10px;width:100%;height:44px;background:#111;color:#ffd400;border:none;font-family:inherit;font-weight:700;font-size:14px;text-transform:uppercase}
+.m1 .nav{background:#111;padding:0 6px}
+.m1 .ni{flex:1;text-align:center;color:#777;font-size:9px;font-weight:600;text-transform:uppercase}
+.m1 .ni .i{font-size:18px;display:block}
+.m1 .ni.on{color:#ffd400}
+.m1 .add{flex:0 0 auto;margin:0 4px}
+.m1 .add .b{width:52px;height:52px;background:#ffd400;color:#111;border:3px solid #f4f2ea;font-size:26px;font-weight:700;display:flex;align-items:center;justify-content:center;transform:translateY(-14px)}
+
+/* ============================================================
+   M2 · CALM SOFT — muted sage, soft dual shadow
+   ============================================================ */
+.m2 .screen{background:#e9ede8;font-family:'Prompt',sans-serif}
+.m2 .hd{background:#e9ede8;padding-top:42px}
+.m2 .hd h1{font-size:18px;font-weight:500;color:#4a5a4f}
+.m2 .hd p{font-size:11px;font-weight:300;color:#8a9a8e;margin-top:2px}
+.m2 .proj{margin-top:12px;background:#e9ede8;border-radius:16px;padding:11px 14px;font-size:12px;color:#5a6a5f;display:flex;justify-content:space-between;box-shadow:5px 5px 12px #cfd6cd,-5px -5px 12px #fbfffb}
+.m2 .chip{font-size:11px;font-weight:400;padding:8px 13px;border-radius:20px;background:#e9ede8;color:#7a8a7e;box-shadow:3px 3px 7px #cfd6cd,-3px -3px 7px #fbfffb}
+.m2 .chip.on{background:#7a9a86;color:#fff;box-shadow:inset 2px 2px 5px #5f7d6b,inset -2px -2px 5px #95b7a1}
+.m2 .card{background:#e9ede8;border-radius:20px;padding:14px;margin-bottom:14px;box-shadow:6px 6px 14px #cfd6cd,-6px -6px 14px #fbfffb}
+.m2 .card.done{opacity:.7}
+.m2 .c1{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.m2 .proj2{font-size:10px;font-weight:500;color:#8a9a8e;text-transform:uppercase}
+.m2 .st{font-size:10px;font-weight:400;padding:4px 11px;border-radius:20px}
+.m2 .st.wait{background:#f0e4d4;color:#b08850}
+.m2 .st.ok{background:#dcebe0;color:#6a9a78}
+.m2 .tags{display:flex;gap:6px;margin-bottom:7px}
+.m2 .tag{font-size:10px;font-weight:300;padding:4px 10px;border-radius:20px;background:#dfe6dd;color:#6a7a6e}
+.m2 .who{font-size:14.5px;font-weight:500;color:#4a5a4f}
+.m2 .items{font-size:11px;color:#8a9a8e;font-weight:300;margin-top:2px}
+.m2 .deliver{margin-top:11px;width:100%;height:46px;border:none;border-radius:15px;background:#7a9a86;color:#fff;font-family:inherit;font-size:14px;font-weight:500;box-shadow:4px 4px 10px #cfd6cd,-4px -4px 10px #fbfffb}
+.m2 .nav{background:#e9ede8;box-shadow:0 -4px 14px #d4dbd2}
+.m2 .ni{flex:1;text-align:center;color:#9aaa9e;font-size:9.5px;font-weight:300}
+.m2 .ni .i{font-size:18px;display:block;margin-bottom:1px}
+.m2 .ni.on{color:#7a9a86;font-weight:400}
+.m2 .add{flex:0 0 auto;margin:0 5px}
+.m2 .add .b{width:54px;height:54px;border-radius:50%;background:#7a9a86;color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;transform:translateY(-16px);box-shadow:5px 5px 12px #cfd6cd,-5px -5px 12px #fbfffb}
+
+/* ============================================================
+   M3 · NIGHT COMMAND — dark, teal glow
+   ============================================================ */
+.m3 .screen{background:#0e1418;font-family:'Chakra Petch',sans-serif}
+.m3 .hd{background:linear-gradient(160deg,#152029,#0e1418);padding-top:42px;border-bottom:1px solid #1e2b33}
+.m3 .hd h1{font-size:18px;font-weight:600;color:#e6f6f3}
+.m3 .hd p{font-size:10.5px;font-weight:400;color:#5a8a84;margin-top:2px;letter-spacing:.04em}
+.m3 .proj{margin-top:12px;background:#172129;border:1px solid #24333c;border-radius:12px;padding:11px 13px;font-size:12px;color:#9fd8d0;display:flex;justify-content:space-between}
+.m3 .chip{font-size:11px;font-weight:400;padding:7px 12px;border-radius:8px;background:#172129;color:#6a908a;border:1px solid #24333c}
+.m3 .chip.on{background:rgba(53,224,200,.15);color:#35e0c8;border-color:#35e0c8}
+.m3 .card{background:#151f26;border:1px solid #22313a;border-left:3px solid #35e0c8;border-radius:12px;padding:13px;margin-bottom:12px}
+.m3 .card.done{border-left-color:#3a5c56;opacity:.72}
+.m3 .c1{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.m3 .proj2{font-size:9.5px;font-weight:500;color:#5a8a84;text-transform:uppercase;letter-spacing:.05em}
+.m3 .st{font-size:9.5px;font-weight:500;padding:3px 9px;border-radius:6px;font-family:'DM Mono'}
+.m3 .st.wait{background:rgba(240,170,70,.14);color:#f0aa46}
+.m3 .st.ok{background:rgba(53,224,200,.14);color:#35e0c8}
+.m3 .tags{display:flex;gap:5px;margin-bottom:7px}
+.m3 .tag{font-size:9.5px;font-weight:400;padding:3px 8px;border-radius:6px;background:#1d2a32;color:#7fb3ac}
+.m3 .who{font-size:15px;font-weight:600;color:#e6f6f3}
+.m3 .items{font-size:10.5px;color:#6a908a;font-weight:400;margin-top:2px;font-family:'DM Mono'}
+.m3 .deliver{margin-top:11px;width:100%;height:46px;border:none;border-radius:11px;background:linear-gradient(90deg,#35e0c8,#28b8a4);color:#04231f;font-family:inherit;font-weight:600;font-size:14px}
+.m3 .nav{background:#111a20;border-top:1px solid #1e2b33}
+.m3 .ni{flex:1;text-align:center;color:#4a6a66;font-size:9px;font-weight:400}
+.m3 .ni .i{font-size:17px;display:block}
+.m3 .ni.on{color:#35e0c8}
+.m3 .add{flex:0 0 auto;margin:0 5px}
+.m3 .add .b{width:52px;height:52px;border-radius:50%;background:#35e0c8;color:#04231f;font-size:26px;display:flex;align-items:center;justify-content:center;transform:translateY(-15px);box-shadow:0 0 22px rgba(53,224,200,.55)}
+
+/* ============================================================
+   M4 · EDITORIAL LEDGER — Thai serif, thin rules
+   ============================================================ */
+.m4 .screen{background:#faf8f3;font-family:'Trirong',serif}
+.m4 .hd{background:#faf8f3;padding:44px 18px 12px;border-bottom:1px solid #1a1a1a}
+.m4 .hd h1{font-size:22px;font-weight:500;color:#1a1a1a;letter-spacing:.01em}
+.m4 .hd p{font-size:11px;font-weight:300;color:#8a2b2b;margin-top:3px;font-style:italic}
+.m4 .proj{margin-top:12px;padding:8px 0;font-size:12px;color:#444;display:flex;justify-content:space-between;border-top:1px solid #ddd6c8}
+.m4 .chips{padding:12px 18px 4px}
+.m4 .chip{font-size:11px;font-weight:400;padding:5px 2px;background:none;color:#999;border-bottom:1.5px solid transparent;border-radius:0;margin-right:14px}
+.m4 .chip.on{color:#8a2b2b;border-bottom-color:#8a2b2b}
+.m4 .list{padding:4px 18px}
+.m4 .card{background:none;border:none;border-bottom:1px solid #e4ddcf;padding:15px 0;margin:0}
+.m4 .card.done{opacity:.6}
+.m4 .c1{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.m4 .proj2{font-size:10px;font-weight:500;color:#8a2b2b;text-transform:uppercase;letter-spacing:.08em}
+.m4 .st{font-size:10px;font-weight:400;font-style:italic;color:#a08050}
+.m4 .st.ok{color:#5a7a60}
+.m4 .who{font-size:19px;font-weight:500;color:#1a1a1a;line-height:1.2}
+.m4 .tags{display:flex;gap:12px;margin:4px 0}
+.m4 .tag{font-size:11px;font-weight:300;color:#777;font-style:italic}
+.m4 .items{font-size:12px;color:#666;font-weight:300}
+.m4 .deliver{margin-top:11px;width:100%;height:44px;border:1px solid #1a1a1a;background:none;color:#1a1a1a;font-family:inherit;font-size:14px;font-weight:500;letter-spacing:.03em}
+.m4 .nav{background:#faf8f3;border-top:1px solid #1a1a1a}
+.m4 .ni{flex:1;text-align:center;color:#aaa;font-size:9px;font-weight:400;font-family:'Prompt'}
+.m4 .ni .i{font-size:15px;display:block;margin-bottom:2px}
+.m4 .ni.on{color:#8a2b2b}
+.m4 .add{flex:0 0 auto;margin:0 6px}
+.m4 .add .b{width:48px;height:48px;border-radius:50%;background:#8a2b2b;color:#faf8f3;font-size:24px;font-weight:300;display:flex;align-items:center;justify-content:center;transform:translateY(-14px)}
+
+/* ============================================================
+   M5 · BRIGHT FRIENDLY — Baloo, color-coded, rounded
+   ============================================================ */
+.m5 .screen{background:#fff6ef;font-family:'Baloo Thai 2',sans-serif}
+.m5 .hd{background:linear-gradient(135deg,#ff8a4c,#ff5f7e);padding:44px 16px 16px}
+.m5 .hd h1{font-size:19px;font-weight:700;color:#fff}
+.m5 .hd p{font-size:11px;font-weight:500;color:#fff;opacity:.85}
+.m5 .proj{margin-top:12px;background:rgba(255,255,255,.22);border-radius:16px;padding:10px 14px;font-size:12px;color:#fff;font-weight:600;display:flex;justify-content:space-between}
+.m5 .chip{font-size:11px;font-weight:600;padding:8px 13px;border-radius:20px;background:#fff;color:#ff7a4c;box-shadow:0 3px 8px rgba(255,138,76,.2)}
+.m5 .chip.on{background:#ff5f7e;color:#fff}
+.m5 .card{background:#fff;border-radius:20px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 6px 16px rgba(255,138,76,.18)}
+.m5 .strip{height:7px}
+.m5 .strip.parcel{background:#ff8a4c}.m5 .strip.key{background:#4c9aff}
+.m5 .cbody{padding:13px 14px}
+.m5 .c1{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.m5 .proj2{font-size:10px;font-weight:700;color:#ff7a4c}
+.m5 .st{font-size:10px;font-weight:600;padding:4px 11px;border-radius:20px}
+.m5 .st.wait{background:#fff0e2;color:#f0902e}
+.m5 .st.ok{background:#e3f7ea;color:#3aad63}
+.m5 .tags{display:flex;gap:6px;margin-bottom:6px}
+.m5 .tag{font-size:10px;font-weight:500;padding:4px 10px;border-radius:20px;background:#fff0e8;color:#e07a45}
+.m5 .tag.blue{background:#e8f1ff;color:#4585d6}
+.m5 .who{font-size:16px;font-weight:700;color:#3a3230}
+.m5 .items{font-size:11px;color:#9a8a80;font-weight:500}
+.m5 .deliver{margin-top:11px;width:100%;height:46px;border:none;border-radius:15px;background:#3aad63;color:#fff;font-family:inherit;font-weight:700;font-size:15px}
+.m5 .nav{background:#fff;box-shadow:0 -4px 16px rgba(255,138,76,.14);border-radius:22px 22px 0 0}
+.m5 .ni{flex:1;text-align:center;color:#c3b2a8;font-size:9.5px;font-weight:600}
+.m5 .ni .i{font-size:18px;display:block}
+.m5 .ni.on{color:#ff7a4c}
+.m5 .add{flex:0 0 auto;margin:0 5px}
+.m5 .add .b{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#ff8a4c,#ff5f7e);color:#fff;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;transform:translateY(-18px);box-shadow:0 8px 20px rgba(255,95,126,.45)}
+
+/* ============================================================
+   M6 · RECEIPT STUB — paper, dashed, stamp
+   ============================================================ */
+.m6 .screen{background:#efe7d6;font-family:'Kanit',sans-serif}
+.m6 .hd{background:#efe7d6;padding:44px 16px 12px;text-align:center;border-bottom:2px dashed #bcae92}
+.m6 .hd h1{font-size:17px;font-weight:500;color:#3a3222;letter-spacing:.06em;text-transform:uppercase}
+.m6 .hd p{font-size:10px;font-weight:300;color:#8a7d5f;margin-top:3px;font-family:'DM Mono'}
+.m6 .proj{margin-top:10px;font-size:11px;color:#5a5038;display:flex;justify-content:space-between;font-family:'DM Mono';padding:0 4px}
+.m6 .list{padding:10px 14px}
+.m6 .card{background:#fdfaf1;padding:13px 14px;margin-bottom:16px;position:relative;box-shadow:0 2px 6px rgba(90,70,30,.16);
+  background-image:radial-gradient(circle at 6px 50%,transparent 5px,#fdfaf1 5px);border-radius:2px}
+.m6 .card::before,.m6 .card::after{content:'';position:absolute;left:0;right:0;height:8px;background-image:radial-gradient(circle,transparent 4px,#efe7d6 4.5px);background-size:14px 14px;background-position:center}
+.m6 .card::before{top:-4px}.m6 .card::after{bottom:-4px}
+.m6 .c1{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;border-bottom:1px dashed #d8cba8;padding-bottom:6px}
+.m6 .proj2{font-size:10px;font-weight:500;color:#3a3222;text-transform:uppercase;letter-spacing:.04em}
+.m6 .st{font-size:10px;font-weight:400;font-family:'DM Mono';color:#b07a3a}
+.m6 .st.ok{color:#5a7a50}
+.m6 .tags{display:flex;gap:8px;margin-bottom:6px;font-family:'DM Mono'}
+.m6 .tag{font-size:10px;font-weight:400;color:#7a6f52}
+.m6 .who{font-size:15px;font-weight:500;color:#2e2818}
+.m6 .items{font-size:10.5px;color:#8a7d5f;font-weight:300;font-family:'DM Mono';margin-top:2px}
+.m6 .stamp{position:absolute;right:12px;top:34px;border:2px solid #5a7a50;color:#5a7a50;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;transform:rotate(-14deg);opacity:.7;text-transform:uppercase;letter-spacing:.05em}
+.m6 .deliver{margin-top:10px;width:100%;height:44px;border:1.5px dashed #3a3222;background:#efe7d6;color:#3a3222;font-family:inherit;font-weight:500;font-size:13.5px;letter-spacing:.04em}
+.m6 .nav{background:#fdfaf1;border-top:2px dashed #bcae92}
+.m6 .ni{flex:1;text-align:center;color:#a89a78;font-size:9px;font-weight:300}
+.m6 .ni .i{font-size:16px;display:block}
+.m6 .ni.on{color:#3a3222;font-weight:400}
+.m6 .add{flex:0 0 auto;margin:0 5px}
+.m6 .add .b{width:50px;height:50px;border-radius:50%;background:#3a3222;color:#efe7d6;font-size:24px;display:flex;align-items:center;justify-content:center;transform:translateY(-15px)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="page-head">
+    <h1>Handover Log · 6 ทิศทางใหม่</h1>
+    <p>เลือกแบบที่ใช่ — ทุกแบบ mobile-first, ปุ่มใหญ่, สแกนเร็ว · แตะดูแล้วบอกหมายเลขที่ชอบ</p>
+  </div>
+
+  <div class="gallery">
+
+    <!-- ===== M1 SAFETY OPS ===== -->
+    <div class="slot">
+      <div class="tagrow"><span class="tagnum">1</span><span class="tagname">Safety Ops</span></div>
+      <div class="phone m1"><div class="screen">
+        <div class="scroll">
+          <div class="hd"><h1>รับ-ส่งของ</h1><p>บันทึกหน้างาน · ทุกโครงการ</p>
+            <div class="proj"><span>📍 ทุกโครงการ</span><span>▾</span></div></div>
+          <div class="chips"><span class="chip on">ทั้งหมด</span><span class="chip">รับเข้า</span><span class="chip">ส่งออก</span></div>
+          <div class="list">
+            <div class="card"><div class="c1"><span class="proj2">Somerset Rama 9</span><span class="st wait">ค้างอยู่</span></div>
+              <div class="tags"><span class="tag">⬇ รับเข้า</span><span class="tag">📦 พัสดุ</span></div>
+              <div class="who">สมชาย ใจดี</div><div class="items">กล่อง Shopee ×3 · จม.ลงทะเบียน ×1</div>
+              <button class="deliver">✓ ส่งมอบแล้ว</button></div>
+            <div class="card"><div class="c1"><span class="proj2">Culture Chula</span><span class="st ok">ส่งมอบแล้ว</span></div>
+              <div class="tags"><span class="tag">⬆ ส่งออก</span><span class="tag">🔑 กุญแจ</span></div>
+              <div class="who">ช่างแอร์</div><div class="items">กุญแจห้องแอร์ ×1</div></div>
+          </div>
+        </div>
+        <div class="nav"><span class="ni on"><span class="i">▤</span>ทั้งหมด</span><span class="ni"><span class="i">◷</span>ค้าง</span>
+          <span class="add"><span class="b">+</span></span><span class="ni"><span class="i">✓</span>ส่งมอบ</span><span class="ni"><span class="i">↥</span>รายงาน</span></div>
+      </div></div>
+      <div class="why"><b>นีโอบรูทัลลิสต์</b> ขอบดำหนา 3px เงาแข็ง เหลืองเซฟตี้ — อ่านชัดกลางแดด กดแม่นแม้ใส่ถุงมือ เหมาะไซต์ก่อสร้าง/รปภ.</div>
+    </div>
+
+    <!-- ===== M2 CALM SOFT ===== -->
+    <div class="slot">
+      <div class="tagrow"><span class="tagnum">2</span><span class="tagname">Calm Soft</span></div>
+      <div class="phone m2"><div class="screen">
+        <div class="scroll">
+          <div class="hd"><h1>รับ-ส่งของ</h1><p>บันทึกง่าย ๆ ทุกโครงการ</p>
+            <div class="proj"><span>📍 ทุกโครงการ</span><span>▾</span></div></div>
+          <div class="chips"><span class="chip on">ทั้งหมด</span><span class="chip">รับเข้า</span><span class="chip">ส่งออก</span></div>
+          <div class="list">
+            <div class="card"><div class="c1"><span class="proj2">Somerset Rama 9</span><span class="st wait">ค้างอยู่</span></div>
+              <div class="tags"><span class="tag">⬇ รับเข้า</span><span class="tag">📦 พัสดุ</span></div>
+              <div class="who">สมชาย ใจดี</div><div class="items">กล่อง Shopee ×3 · จม.ลงทะเบียน ×1</div>
+              <button class="deliver">ส่งมอบแล้ว</button></div>
+            <div class="card done"><div class="c1"><span class="proj2">Culture Chula</span><span class="st ok">ส่งมอบแล้ว</span></div>
+              <div class="tags"><span class="tag">⬆ ส่งออก</span><span class="tag">🔑 กุญแจ</span></div>
+              <div class="who">ช่างแอร์</div><div class="items">กุญแจห้องแอร์ ×1</div></div>
+          </div>
+        </div>
+        <div class="nav"><span class="ni on"><span class="i">☰</span>ทั้งหมด</span><span class="ni"><span class="i">◔</span>ค้าง</span>
+          <span class="add"><span class="b">+</span></span><span class="ni"><span class="i">✓</span>ส่งมอบ</span><span class="ni"><span class="i">⤴</span>รายงาน</span></div>
+      </div></div>
+      <div class="why"><b>นุ่ม-สงบ</b> เงา neumorphic โทนเสจ ลดความเครียดหน้างาน สบายตา — เหมาะทีมนิติ/ออฟฟิศที่อยากได้ฟีลพรีเมียมนวลๆ</div>
+    </div>
+
+    <!-- ===== M3 NIGHT COMMAND ===== -->
+    <div class="slot">
+      <div class="tagrow"><span class="tagnum">3</span><span class="tagname">Night Command</span></div>
+      <div class="phone m3"><div class="screen">
+        <div class="scroll">
+          <div class="hd"><h1>รับ-ส่งของ</h1><p>HANDOVER LOG · LIVE</p>
+            <div class="proj"><span>📍 ทุกโครงการ</span><span>▾</span></div></div>
+          <div class="chips"><span class="chip on">ทั้งหมด</span><span class="chip">รับเข้า</span><span class="chip">ส่งออก</span></div>
+          <div class="list">
+            <div class="card"><div class="c1"><span class="proj2">Somerset Rama 9</span><span class="st wait">PENDING</span></div>
+              <div class="tags"><span class="tag">⬇ รับเข้า</span><span class="tag">📦 พัสดุ</span></div>
+              <div class="who">สมชาย ใจดี</div><div class="items">box ×3 · reg.mail ×1</div>
+              <button class="deliver">✓ ส่งมอบแล้ว</button></div>
+            <div class="card done"><div class="c1"><span class="proj2">Culture Chula</span><span class="st ok">DONE</span></div>
+              <div class="tags"><span class="tag">⬆ ส่งออก</span><span class="tag">🔑 กุญแจ</span></div>
+              <div class="who">ช่างแอร์</div><div class="items">key ×1</div></div>
+          </div>
+        </div>
+        <div class="nav"><span class="ni on"><span class="i">▦</span>ทั้งหมด</span><span class="ni"><span class="i">◷</span>ค้าง</span>
+          <span class="add"><span class="b">+</span></span><span class="ni"><span class="i">✓</span>ส่งมอบ</span><span class="ni"><span class="i">↗</span>รายงาน</span></div>
+      </div></div>
+      <div class="why"><b>ดาร์ก กะดึก</b> ทีล-เรืองแสง ตัวเลข mono — จอไม่แสบตาเวรกลางคืน ดูโปร/เทคนิค เหมาะ รปภ.กะดึก/ห้องคุมงาน</div>
+    </div>
+
+    <!-- ===== M4 EDITORIAL LEDGER ===== -->
+    <div class="slot">
+      <div class="tagrow"><span class="tagnum">4</span><span class="tagname">Editorial Ledger</span></div>
+      <div class="phone m4"><div class="screen">
+        <div class="scroll">
+          <div class="hd"><h1>รับ-ส่งของ</h1><p>สมุดบันทึกการรับ-ส่ง</p>
+            <div class="proj"><span>ทุกโครงการ</span><span>▾</span></div></div>
+          <div class="chips"><span class="chip on">ทั้งหมด</span><span class="chip">รับเข้า</span><span class="chip">ส่งออก</span></div>
+          <div class="list">
+            <div class="card"><div class="c1"><span class="proj2">Somerset Rama 9</span><span class="st">ค้างอยู่</span></div>
+              <div class="who">สมชาย ใจดี</div>
+              <div class="tags"><span class="tag">รับเข้า</span><span class="tag">พัสดุ</span></div>
+              <div class="items">กล่อง Shopee ×3 · จม.ลงทะเบียน ×1</div>
+              <button class="deliver">ยืนยันส่งมอบ</button></div>
+            <div class="card done"><div class="c1"><span class="proj2">Culture Chula</span><span class="st ok">ส่งมอบแล้ว</span></div>
+              <div class="who">ช่างแอร์</div>
+              <div class="tags"><span class="tag">ส่งออก</span><span class="tag">กุญแจ</span></div>
+              <div class="items">กุญแจห้องแอร์ ×1</div></div>
+          </div>
+        </div>
+        <div class="nav"><span class="ni on"><span class="i">▤</span>ทั้งหมด</span><span class="ni"><span class="i">◷</span>ค้าง</span>
+          <span class="add"><span class="b">+</span></span><span class="ni"><span class="i">✓</span>ส่งมอบ</span><span class="ni"><span class="i">↥</span>รายงาน</span></div>
+      </div></div>
+      <div class="why"><b>เอกสารพรีเมียม</b> เซอริฟไทย (Trirong) เส้นบาง เนื้อที่โปร่ง สีแดงเลือดหมูจุดเดียว — ให้ฟีล "หลักฐาน/สมุดคุม" น่าเชื่อถือ</div>
+    </div>
+
+    <!-- ===== M5 BRIGHT FRIENDLY ===== -->
+    <div class="slot">
+      <div class="tagrow"><span class="tagnum">5</span><span class="tagname">Bright Friendly</span></div>
+      <div class="phone m5"><div class="screen">
+        <div class="scroll">
+          <div class="hd"><h1>รับ-ส่งของ 🧡</h1><p>บันทึกสนุก ง่าย เร็ว</p>
+            <div class="proj"><span>📍 ทุกโครงการ</span><span>▾</span></div></div>
+          <div class="chips"><span class="chip on">ทั้งหมด</span><span class="chip">รับเข้า</span><span class="chip">ส่งออก</span></div>
+          <div class="list">
+            <div class="card"><div class="strip parcel"></div><div class="cbody">
+              <div class="c1"><span class="proj2">Somerset Rama 9</span><span class="st wait">ค้างอยู่</span></div>
+              <div class="tags"><span class="tag">⬇ รับเข้า</span><span class="tag">📦 พัสดุ</span></div>
+              <div class="who">สมชาย ใจดี</div><div class="items">กล่อง Shopee ×3 · จม. ×1</div>
+              <button class="deliver">✓ ส่งมอบแล้ว</button></div></div>
+            <div class="card"><div class="strip key"></div><div class="cbody">
+              <div class="c1"><span class="proj2">Culture Chula</span><span class="st ok">ส่งมอบแล้ว</span></div>
+              <div class="tags"><span class="tag blue">⬆ ส่งออก</span><span class="tag blue">🔑 กุญแจ</span></div>
+              <div class="who">ช่างแอร์</div><div class="items">กุญแจห้องแอร์ ×1</div></div></div>
+          </div>
+        </div>
+        <div class="nav"><span class="ni on"><span class="i">🏠</span>ทั้งหมด</span><span class="ni"><span class="i">⏳</span>ค้าง</span>
+          <span class="add"><span class="b">+</span></span><span class="ni"><span class="i">✅</span>ส่งมอบ</span><span class="ni"><span class="i">📤</span>รายงาน</span></div>
+      </div></div>
+      <div class="why"><b>สดใส เป็นมิตร</b> Baloo กลมๆ แถบสีตามประเภท (พัสดุส้ม/กุญแจฟ้า) สแกนด้วยสายตาเร็ว — เหมาะทีมที่อยากได้ฟีลเบา เข้าถึงง่าย</div>
+    </div>
+
+    <!-- ===== M6 RECEIPT STUB ===== -->
+    <div class="slot">
+      <div class="tagrow"><span class="tagnum">6</span><span class="tagname">Receipt Stub</span></div>
+      <div class="phone m6"><div class="screen">
+        <div class="scroll">
+          <div class="hd"><h1>ใบรับ-ส่งของ</h1><p>HANDOVER RECEIPT LOG</p>
+            <div class="proj"><span>PROJECT: ALL</span><span>[▾]</span></div></div>
+          <div class="chips"><span class="chip on">ทั้งหมด</span><span class="chip">รับเข้า</span><span class="chip">ส่งออก</span></div>
+          <div class="list">
+            <div class="card"><div class="c1"><span class="proj2">Somerset Rama 9</span><span class="st">** ค้างอยู่ **</span></div>
+              <div class="tags"><span class="tag">IN</span><span class="tag">พัสดุ</span></div>
+              <div class="who">สมชาย ใจดี</div><div class="items">box x3 · reg.mail x1</div>
+              <button class="deliver">— ส่งมอบแล้ว —</button></div>
+            <div class="card done"><div class="stamp">ส่งมอบแล้ว</div><div class="c1"><span class="proj2">Culture Chula</span><span class="st ok">** DONE **</span></div>
+              <div class="tags"><span class="tag">OUT</span><span class="tag">กุญแจ</span></div>
+              <div class="who">ช่างแอร์</div><div class="items">key x1</div></div>
+          </div>
+        </div>
+        <div class="nav"><span class="ni on"><span class="i">▤</span>ทั้งหมด</span><span class="ni"><span class="i">◷</span>ค้าง</span>
+          <span class="add"><span class="b">+</span></span><span class="ni"><span class="i">✓</span>ส่งมอบ</span><span class="ni"><span class="i">↥</span>รายงาน</span></div>
+      </div></div>
+      <div class="why"><b>ใบเสร็จกระดาษ</b> ขอบปรุ เส้นประ ตราปั๊ม "ส่งมอบแล้ว" ตัวเลข mono — ตรงกับ mental model "ใบรับ-ส่ง/หลักฐาน" ที่สุด จำง่าย</div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
