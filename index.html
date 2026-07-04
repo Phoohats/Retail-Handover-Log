@@ -796,22 +796,44 @@ async function delRecord(id){
 // ━━━ DELIVER ━━━
 // canvas signature pad — pointer events (นิ้ว/เมาส์/ปากกา) · decision 14
 let sig=null;
+// hardened per Retail-Inspection-APP: touch+pointer events, dpr sizing,
+// clone-reset (no window-listener leak), white-bg scaled snapshot
 function makeSigPad(canvas){
+  // clone to drop any listeners from a previous open (was a window 'pointerup' leak)
+  const fresh=canvas.cloneNode(false); canvas.parentNode.replaceChild(fresh,canvas); canvas=fresh;
   const ctx=canvas.getContext("2d");
-  const ratio=Math.max(window.devicePixelRatio||1,1);
+  const dpr=Math.max(window.devicePixelRatio||1,1);
   const rect=canvas.getBoundingClientRect();
-  canvas.width=rect.width*ratio; canvas.height=rect.height*ratio;
-  ctx.scale(ratio,ratio);
-  ctx.lineWidth=2.2; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.strokeStyle="#46564c";
+  const w=Math.max(Math.floor(rect.width),240), h=Math.max(Math.floor(rect.height),140);
+  canvas.width=Math.floor(w*dpr); canvas.height=Math.floor(h*dpr);
+  canvas.style.height=h+"px";
+  ctx.scale(dpr,dpr);
+  ctx.lineWidth=2.4; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.strokeStyle="#46564c";
   let drawing=false, empty=true, last=null;
-  const pos=e=>{const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};};
-  const start=e=>{e.preventDefault();drawing=true;last=pos(e);};
-  const move=e=>{if(!drawing)return;e.preventDefault();const p=pos(e);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);ctx.stroke();last=p;empty=false;};
-  const end=()=>{drawing=false;};
-  canvas.addEventListener("pointerdown",start);
-  canvas.addEventListener("pointermove",move);
-  window.addEventListener("pointerup",end);
-  return { clear(){ctx.clearRect(0,0,canvas.width,canvas.height);empty=true;}, isEmpty(){return empty;}, dataUrl(){return canvas.toDataURL("image/png");} };
+  const pt=e=>{const s=(e.touches&&e.touches[0])||(e.changedTouches&&e.changedTouches[0])||e;const r=canvas.getBoundingClientRect();return {x:s.clientX-r.left,y:s.clientY-r.top};};
+  const start=e=>{e.preventDefault();drawing=true;last=pt(e);};
+  const move=e=>{if(!drawing)return;e.preventDefault();const p=pt(e);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);ctx.stroke();last=p;empty=false;};
+  const end=e=>{if(e)e.preventDefault();drawing=false;};
+  // touch (mobile) — passive:false so preventDefault blocks scroll/pinch
+  canvas.addEventListener("touchstart",start,{passive:false});
+  canvas.addEventListener("touchmove",move,{passive:false});
+  canvas.addEventListener("touchend",end,{passive:false});
+  canvas.addEventListener("touchcancel",end,{passive:false});
+  // pointer (mouse/stylus) — skip touch to avoid double-draw; capture so up fires on el
+  canvas.addEventListener("pointerdown",e=>{if(e.pointerType==="touch")return;start(e);if(canvas.setPointerCapture)try{canvas.setPointerCapture(e.pointerId);}catch(_){}},{passive:false});
+  canvas.addEventListener("pointermove",e=>{if(e.pointerType==="touch")return;move(e);},{passive:false});
+  canvas.addEventListener("pointerup",e=>{if(e.pointerType!=="touch")end(e);},{passive:false});
+  return {
+    clear(){ctx.clearRect(0,0,canvas.width,canvas.height);empty=true;},
+    isEmpty(){return empty;},
+    dataUrl(){ // white bg + scale to ~700px wide (smaller blob, PDF-friendly)
+      const ratio=canvas.width/Math.max(canvas.height,1);
+      const ow=Math.min(700,canvas.width), oh=Math.max(1,Math.round(ow/ratio));
+      const out=document.createElement("canvas"); out.width=ow; out.height=oh;
+      const o=out.getContext("2d"); o.fillStyle="#fff"; o.fillRect(0,0,ow,oh); o.drawImage(canvas,0,0,ow,oh);
+      return out.toDataURL("image/png");
+    }
+  };
 }
 function openDeliver(id){
   const l=logs.find(x=>x._id===id); if(!l)return;
@@ -889,41 +911,94 @@ function exportExcel(){
   XLSX.writeFile(wb,`handover_${new Date().toISOString().slice(0,10)}.xlsx`);
   toast("📊 ดาวน์โหลด Excel แล้ว");
 }
-function exportPdfReport(){
-  const list=getFiltered();
-  if(!list.length)return toast("ไม่มีรายการให้ส่งออก");
-  const rows=list.map((l,i)=>`<tr><td>${i+1}</td><td>${esc(fmtDay(l.occurredAt||l.createdAt))}</td><td>${esc(l.project||"")}</td>
-    <td>${l.direction==="in"?"รับเข้า":"ส่งออก"}</td><td>${esc((TYPE_LABEL[l.itemType]||"").replace(/[^฀-๿ ]/g,"").trim())}</td>
-    <td>${esc(l.personType==="internal"?`${l.internalName||""} ${l.internalSurname||""}`:(l.externalName||"ภายนอก"))}</td>
-    <td>${esc((l.items||[]).map(x=>`${x.description}${x.qty?" ×"+x.qty:""}`).join(", "))}</td>
-    <td>${l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่"}</td><td>${esc(l.recordedBy||"")}</td></tr>`).join("");
-  $("printArea").innerHTML=`<div class="pr-wrap"><div class="pr-h"><h1>รายงานการรับ-ส่ง พัสดุ/เอกสาร/กุญแจ</h1>
-    <p>พิมพ์เมื่อ ${fmtDate(new Date().toISOString())} · รวม ${list.length} รายการ</p></div>
-    <table class="pr-t"><thead><tr><th>#</th><th>วันที่</th><th>โครงการ</th><th>ทิศทาง</th><th>ประเภท</th><th>ผู้เกี่ยวข้อง</th><th>รายการของ</th><th>สถานะ</th><th>ผู้บันทึก</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-  window.print();
+// ━━━ PDF via pdfmake (Thai-safe vector + shareable — replaces window.print;
+//     pattern reused from Retail-Inspection-APP: pdfmake+Sarabun+navigator.share) ━━━
+function _injectScript(src){return new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=()=>rej(new Error("load "+src));document.head.appendChild(s);});}
+async function _ttfB64(url){const buf=await (await fetch(url)).arrayBuffer();const b=new Uint8Array(buf);let s="";for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s);}
+let _pdfReady=null;
+function loadPdf(){
+  if(_pdfReady)return _pdfReady;
+  _pdfReady=(async()=>{
+    await _injectScript("https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js");
+    await _injectScript("https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.min.js");
+    if(typeof pdfMake==="undefined")throw new Error("pdfmake init failed");
+    try{
+      const reg=await _ttfB64("https://cdn.jsdelivr.net/gh/cadsondemak/Sarabun@master/fonts/Sarabun-Regular.ttf");
+      const bold=await _ttfB64("https://cdn.jsdelivr.net/gh/cadsondemak/Sarabun@master/fonts/Sarabun-Bold.ttf");
+      pdfMake.vfs=pdfMake.vfs||{};
+      pdfMake.vfs["Sarabun-Regular.ttf"]=reg; pdfMake.vfs["Sarabun-Bold.ttf"]=bold;
+      pdfMake.fonts={Sarabun:{normal:"Sarabun-Regular.ttf",bold:"Sarabun-Bold.ttf",italics:"Sarabun-Regular.ttf",bolditalics:"Sarabun-Bold.ttf"},
+        Roboto:{normal:"Roboto-Regular.ttf",bold:"Roboto-Medium.ttf",italics:"Roboto-Italic.ttf",bolditalics:"Roboto-MediumItalic.ttf"}};
+    }catch(e){ console.warn("Sarabun load failed — Thai may render as boxes, falling back to Roboto",e); }
+    return pdfMake;
+  })();
+  _pdfReady.catch(()=>{_pdfReady=null;});
+  return _pdfReady;
 }
-function printSlip(id){
+function _pdfFont(){return (typeof pdfMake!=="undefined"&&pdfMake.vfs&&pdfMake.vfs["Sarabun-Regular.ttf"])?"Sarabun":"Roboto";}
+// Firebase Storage url → base64; fetch first, <img>+canvas fallback (iOS in-app WebView blocks fetch)
+async function _imgToData(src){
+  if(!src)return null;
+  if(src.startsWith("data:"))return src;
+  try{ const blob=await (await fetch(src,{mode:"cors"})).blob();
+    return await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.onerror=()=>r(null);fr.readAsDataURL(blob);}); }
+  catch(e){
+    try{ return await new Promise((res,rej)=>{const im=new Image();im.crossOrigin="anonymous";im.onload=()=>{const c=document.createElement("canvas");c.width=im.naturalWidth;c.height=im.naturalHeight;c.getContext("2d").drawImage(im,0,0);res(c.toDataURL("image/jpeg",0.8));};im.onerror=()=>rej(new Error("img fail"));im.src=src;}); }
+    catch(e2){ return null; }
+  }
+}
+function _pdfBlob(docDef,ms){return new Promise((res,rej)=>{let done=false;const t=setTimeout(()=>{if(!done){done=true;rej(new Error("pdf render timeout"));}},ms||45000);
+  try{ pdfMake.createPdf(docDef).getBlob(b=>{if(done)return;done=true;clearTimeout(t);b&&b.size?res(b):rej(new Error("empty blob"));}); }catch(e){clearTimeout(t);rej(e);}});}
+async function _sharePdf(blob,name){
+  try{ const file=new File([blob],name,{type:"application/pdf"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return "shared"; }catch(e){ if(e&&e.name==="AbortError")return "cancelled"; } }
+  }catch(_){}
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.rel="noopener";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);return "downloaded";
+}
+async function exportPdfReport(){
+  const list=getFiltered(); if(!list.length)return toast("ไม่มีรายการให้ส่งออก");
+  toast("กำลังสร้าง PDF…");
+  try{
+    await loadPdf(); const font=_pdfFont();
+    const head=["#","วันที่","โครงการ","ทิศทาง","ประเภท","ผู้เกี่ยวข้อง","รายการของ","สถานะ","ผู้บันทึก"].map(t=>({text:t,bold:true,fillColor:"#e6f1ef",color:"#0f5b55"}));
+    const body=[head,...list.map((l,i)=>[String(i+1),fmtDay(l.occurredAt||l.createdAt),l.project||"",l.direction==="in"?"รับเข้า":"ส่งออก",(TYPE_LABEL[l.itemType]||"").replace(/[^฀-๿ ]/g,"").trim(),l.personType==="internal"?`${l.internalName||""} ${l.internalSurname||""}`.trim():(l.externalName||"ภายนอก"),(l.items||[]).map(x=>`${x.description}${x.qty?" ×"+x.qty:""}`).join(", "),l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่",l.recordedBy||""])];
+    const docDef={pageSize:"A4",pageOrientation:"landscape",pageMargins:[24,40,24,32],defaultStyle:{font,fontSize:9},
+      content:[{text:"รายงานการรับ-ส่ง พัสดุ/เอกสาร/กุญแจ",fontSize:15,bold:true,color:"#0f5b55"},
+        {text:`พิมพ์เมื่อ ${fmtDate(new Date().toISOString())} · รวม ${list.length} รายการ`,fontSize:9,color:"#666",margin:[0,2,0,10]},
+        {table:{headerRows:1,widths:[16,46,"*",34,42,"*","*",44,46],body},layout:{fillColor:(r)=>r===0?null:(r%2?"#f6faf9":null)}}]};
+    await _sharePdf(await _pdfBlob(docDef),`handover_${new Date().toISOString().slice(0,10)}.pdf`);
+    toast("📄 สร้าง PDF แล้ว");
+  }catch(e){console.error(e);toast("❌ สร้าง PDF ไม่สำเร็จ: "+(e.message||e));}
+}
+async function printSlip(id){
   const l=logs.find(x=>x._id===id); if(!l)return;
-  const items=(l.items||[]).map(i=>`${esc(i.description)}${i.qty?` ×${esc(String(i.qty))}`:""}`).join(", ")||"-";
-  const who=l.personType==="internal"?`${esc(l.internalName||"")} ${esc(l.internalSurname||"")} (${esc(l.internalDept||"-")})`:esc(l.externalName||"บุคคลภายนอก");
-  const imgs=(l.itemPhotos||[]).map(p=>`<img src="${esc(imgSrc(p))}">`).join("");
-  const dsig=l.deliverSignature?`<img src="${esc(imgSrc(l.deliverSignature))}">`:`<div class="line">ลงชื่อผู้รับมอบ</div>`;
-  $("printArea").innerHTML=`<div class="pr-wrap"><div class="pr-slip">
-    <h2>ใบรับ-ส่ง ${l.direction==="in"?"(รับเข้า)":"(ส่งออก)"} · ${esc(l.project||"")}</h2>
-    <div class="g">
-      <div><b>ประเภท:</b> ${esc((TYPE_LABEL[l.itemType]||"").replace(/[^฀-๿ ]/g,"").trim())}</div>
-      <div><b>สถานะ:</b> ${l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่"}</div>
-      <div><b>วันเวลารับ-ส่ง:</b> ${esc(fmtDate(l.occurredAt||l.createdAt))}</div>
-      <div><b>ผู้บันทึก:</b> ${esc(l.recordedBy||"-")}</div>
-      <div style="grid-column:1/-1"><b>ผู้เกี่ยวข้อง:</b> ${who}</div>
-      <div style="grid-column:1/-1"><b>รายการของ:</b> ${items}</div>
-      ${l.notes?`<div style="grid-column:1/-1"><b>หมายเหตุ:</b> ${esc(l.notes)}</div>`:""}
-      ${l.status==="delivered"?`<div><b>ส่งมอบให้:</b> ${esc(l.deliveredTo||"-")}</div><div><b>เมื่อ:</b> ${esc(fmtDate(l.deliveredAt))}</div>`:""}
-    </div>
-    ${imgs?`<div class="imgs">${imgs}</div>`:""}
-    <div class="sig"><div class="box"><div class="line">ลงชื่อผู้ส่งมอบ</div></div><div class="box">${dsig}<div>ผู้รับมอบ</div></div></div>
-  </div></div>`;
-  window.print();
+  toast("กำลังสร้าง PDF…");
+  try{
+    await loadPdf(); const font=_pdfFont();
+    const itemImgs=[]; for(const p of (l.itemPhotos||[])){ const d=await _imgToData(imgSrc(p)); if(d)itemImgs.push({image:d,fit:[120,90],margin:[0,0,8,8]}); }
+    const sigData=l.deliverSignature?await _imgToData(imgSrc(l.deliverSignature)):null;
+    const who=l.personType==="internal"?`${l.internalName||""} ${l.internalSurname||""} (${l.internalDept||"-"}) · ☎ ${l.internalPhone||"-"}`:(l.externalName||"บุคคลภายนอก");
+    const items=(l.items||[]).map(i=>`${i.description}${i.qty?` ×${i.qty}`:""}`).join(", ")||"-";
+    const info=(k,v)=>[{text:k,bold:true,color:"#555",margin:[0,1,0,1]},{text:v||"-",margin:[0,1,0,1]}];
+    const rows=[info("ประเภท:",(TYPE_LABEL[l.itemType]||"").replace(/[^฀-๿ ]/g,"").trim()),info("สถานะ:",l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่"),info("วันเวลารับ-ส่ง:",fmtDate(l.occurredAt||l.createdAt)),info("ผู้บันทึก:",l.recordedBy)];
+    if(l.status==="delivered"){rows.push(info("ส่งมอบให้:",l.deliveredTo));rows.push(info("เมื่อ:",fmtDate(l.deliveredAt)));}
+    const docDef={pageSize:"A4",pageMargins:[36,40,36,40],defaultStyle:{font,fontSize:11},content:[
+      {text:`ใบรับ-ส่ง ${l.direction==="in"?"(รับเข้า)":"(ส่งออก)"}`,fontSize:17,bold:true,color:"#0f5b55"},
+      {text:l.project||"",fontSize:11,color:"#555",margin:[0,1,0,10]},
+      {table:{widths:["auto","*"],body:rows},layout:"noBorders"},
+      {text:"ผู้เกี่ยวข้อง: "+who,margin:[0,8,0,2]},
+      {text:"รายการของ: "+items,margin:[0,2,0,2]},
+      l.notes?{text:"หมายเหตุ: "+l.notes,margin:[0,2,0,2]}:"",
+      itemImgs.length?{text:"รูปพัสดุ/ของ",bold:true,margin:[0,10,0,4]}:"",
+      itemImgs.length?{columns:itemImgs,columnGap:0}:"",
+      {columns:[
+        {width:"50%",stack:[{text:"____________________",margin:[0,30,0,2]},{text:"ผู้ส่งมอบ",alignment:"center",fontSize:10,color:"#555"}]},
+        {width:"50%",stack:[ sigData?{image:sigData,fit:[180,70],alignment:"center"}:{text:"____________________",margin:[0,30,0,2]}, {text:"ผู้รับมอบ"+(l.deliveredTo?` (${l.deliveredTo})`:""),alignment:"center",fontSize:10,color:"#555",margin:[0,4,0,0]}]}
+      ],margin:[0,20,0,0]}
+    ]};
+    await _sharePdf(await _pdfBlob(docDef),`handover_slip_${id.slice(0,6)}.pdf`);
+    toast("📄 สร้าง PDF แล้ว");
+  }catch(e){console.error(e);toast("❌ สร้าง PDF ไม่สำเร็จ: "+(e.message||e));}
 }
 </script>
 </body>
