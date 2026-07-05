@@ -420,6 +420,8 @@ table.pr-t th{background:#f0e6df}
     <div class="sheet-body">
       <label class="flabel" for="dTo">ส่งมอบให้กับ <span class="req">*</span></label>
       <input class="finput" id="dTo" placeholder="ชื่อผู้รับมอบจริง">
+      <label class="flabel" for="dPhone">เบอร์โทรผู้รับมอบ (ถ้ามี)</label>
+      <input class="finput" type="tel" id="dPhone" placeholder="0xx-xxx-xxxx">
       <label class="flabel" for="dOccurred">วันเวลาที่ส่งมอบ <span class="req">*</span></label>
       <input class="finput" type="datetime-local" id="dOccurred">
 
@@ -879,7 +881,7 @@ function makeSigPad(canvas){
 function openDeliver(id){
   const l=logs.find(x=>x._id===id); if(!l)return;
   if(l.status==="delivered")return toast("รายการนี้ส่งมอบแล้ว");
-  delId=id; $("dTo").value=""; $("dOccurred").value=nowLocal();
+  delId=id; $("dTo").value=""; $("dPhone").value=""; $("dOccurred").value=nowLocal();
   openSheet("delSheet");
   sig=makeSigPad($("sigPad"));   // sync: getBoundingClientRect บังคับ layout ให้ขนาดถูกทันที
 }
@@ -895,7 +897,7 @@ async function confirmDeliver(){
       const dataUrl=sig.dataUrl();
       deliverSignature=await uploadPhoto(delId,"signature",{dataUrl,blob:null},0);
     }
-    const patch={status:"delivered",deliveredTo:to,deliveredAt:localToIso($("dOccurred").value),
+    const patch={status:"delivered",deliveredTo:to,deliveredPhone:$("dPhone").value.trim(),deliveredAt:localToIso($("dOccurred").value),
       occurredAt:logs[idx].occurredAt,updatedAt:new Date().toISOString(),deliverSignature};
     if(USE_FIREBASE&&db){ await db.collection(COLLECTION).doc(delId).set(patch,{merge:true}); }
     logs[idx]={...logs[idx],...patch};
@@ -921,7 +923,7 @@ async function openDetail(id){
     +row("ผู้เกี่ยวข้อง",who)
     +row("วันเวลารับ-ส่ง",fmtDate(l.occurredAt||l.createdAt))
     +row("ผู้บันทึก",esc(l.recordedBy||"-"));
-  if(l.status==="delivered")h+=row("ส่งมอบให้",esc(l.deliveredTo||"-"))+row("เมื่อ",fmtDate(l.deliveredAt));
+  if(l.status==="delivered")h+=row("ส่งมอบให้",esc(l.deliveredTo||"-"))+(l.deliveredPhone?row("เบอร์ผู้รับมอบ","☎ "+esc(l.deliveredPhone)):"")+row("เมื่อ",fmtDate(l.deliveredAt));
   h+=`<label class="flabel">รายการของ</label><div class="items" style="font-size:13px">${items}</div>`;
   h+=`<label class="flabel">รูปพัสดุ/ของ</label>${gallery(l.itemPhotos||[])}`;
   if(l.receiveSignature)h+=`<label class="flabel">ลายเซ็นผู้เกี่ยวข้อง (ตอนรับ-ส่ง)</label>${gallery([l.receiveSignature])}`;
@@ -959,7 +961,7 @@ function exportExcel(){
     "สถานะ":l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่",
     "ผู้เกี่ยวข้อง":l.personType==="internal"?`${l.internalName||""} ${l.internalSurname||""} (${l.internalDept||""})`:(l.externalName||"บุคคลภายนอก"),
     "เบอร์โทร":l.internalPhone||"","รายการของ":(l.items||[]).map(i=>`${i.description}${i.qty?" x"+i.qty:""}`).join(", "),
-    "ผู้บันทึก":l.recordedBy||"","ส่งมอบให้":l.deliveredTo||"","วันที่ส่งมอบ":l.deliveredAt?fmtDate(l.deliveredAt):"","หมายเหตุ":l.notes||""
+    "ผู้บันทึก":l.recordedBy||"","ส่งมอบให้":l.deliveredTo||"","เบอร์ผู้รับมอบ":l.deliveredPhone||"","วันที่ส่งมอบ":l.deliveredAt?fmtDate(l.deliveredAt):"","หมายเหตุ":l.notes||""
   }));
   const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"รับ-ส่งของ");
@@ -1037,7 +1039,7 @@ async function printSlip(id){
     const items=(l.items||[]).map(i=>`${i.description}${i.qty?` ×${i.qty}`:""}`).join(", ")||"-";
     const info=(k,v)=>[{text:k,bold:true,color:"#555",margin:[0,1,0,1]},{text:v||"-",margin:[0,1,0,1]}];
     const rows=[info("ประเภท:",typeText(l)),info("สถานะ:",l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่"),info("วันเวลารับ-ส่ง:",fmtDate(l.occurredAt||l.createdAt)),info("ผู้บันทึก:",l.recordedBy)];
-    if(l.status==="delivered"){rows.push(info("ส่งมอบให้:",l.deliveredTo));rows.push(info("เมื่อ:",fmtDate(l.deliveredAt)));}
+    if(l.status==="delivered"){rows.push(info("ส่งมอบให้:",l.deliveredTo));if(l.deliveredPhone)rows.push(info("เบอร์ผู้รับมอบ:",l.deliveredPhone));rows.push(info("เมื่อ:",fmtDate(l.deliveredAt)));}
     const docDef={pageSize:"A4",pageMargins:[36,40,36,40],defaultStyle:{font,fontSize:11},content:[
       {text:`ใบรับ-ส่ง ${l.direction==="in"?"(รับเข้า)":"(ส่งออก)"}`,fontSize:17,bold:true,color:"#0f5b55"},
       {text:l.project||"",fontSize:11,color:"#555",margin:[0,1,0,10]},
@@ -1049,7 +1051,7 @@ async function printSlip(id){
       itemImgs.length?{columns:itemImgs,columnGap:0}:"",
       {columns:[
         {width:"50%",stack:[ recvSig?{image:recvSig,fit:[180,70],alignment:"center"}:{text:"____________________",margin:[0,30,0,2]}, {text:"ผู้ส่งมอบ/ผู้นำส่ง",alignment:"center",fontSize:10,color:"#555"}]},
-        {width:"50%",stack:[ sigData?{image:sigData,fit:[180,70],alignment:"center"}:{text:"____________________",margin:[0,30,0,2]}, {text:"ผู้รับมอบ"+(l.deliveredTo?` (${l.deliveredTo})`:""),alignment:"center",fontSize:10,color:"#555",margin:[0,4,0,0]}]}
+        {width:"50%",stack:[ sigData?{image:sigData,fit:[180,70],alignment:"center"}:{text:"____________________",margin:[0,30,0,2]}, {text:"ผู้รับมอบ"+(l.deliveredTo?` (${l.deliveredTo}${l.deliveredPhone?" · ☎ "+l.deliveredPhone:""})`:""),alignment:"center",fontSize:10,color:"#555",margin:[0,4,0,0]}]}
       ],margin:[0,20,0,0]}
     ]};
     await _sharePdf(await _pdfBlob(docDef),`handover_slip_${id.slice(0,6)}.pdf`);
