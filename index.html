@@ -363,7 +363,10 @@ table.pr-t th{background:#f0e6df}
       <input type="file" id="itemPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="addPhoto(event,'item')">
       <div class="pgrid" id="itemPhotoGrid"></div>
 
-      <label class="flabel">ผู้เกี่ยวข้อง <span class="req">*</span></label>
+      <label class="flabel" for="rSource">รับมาจาก / ต้นทาง (ถ้ามี)</label>
+      <input class="finput" id="rSource" placeholder="เช่น Kerry / เจ้าของห้อง / ออฟฟิศ (เว้นว่างได้)" maxlength="60">
+
+      <label class="flabel">ผู้รับ / ปลายทาง <span class="req">*</span> <span style="font-weight:300;color:var(--muted)">— ของชิ้นนี้ส่งมอบให้ใคร</span></label>
       <div class="ptoggle">
         <button type="button" id="ptIn" onclick="setPerson('internal')">🧑‍💼 พนักงานในบริษัท</button>
         <button type="button" id="ptEx" onclick="setPerson('external')">👤 บุคคลภายนอก</button>
@@ -679,7 +682,7 @@ function render(){
       <div class="items">📋 ${items}</div>
       ${th?`<div class="thumbs">${th}</div>`:""}
       <div class="meta">🕐 ${fmtDate(l.occurredAt||l.createdAt)} · ✍️ ${esc(l.recordedBy||"-")}</div>
-      ${!locked?`<button class="deliver" onclick="event.stopPropagation();openDeliver('${l._id}')">✅ ส่งมอบแล้ว</button>
+      ${!locked?`<button class="deliver" onclick="event.stopPropagation();openDeliver('${l._id}')">📤 ส่งมอบให้ปลายทาง</button>
         <div class="row-btns"><button onclick="event.stopPropagation();openRecord('${l._id}')">✏️ แก้ไข</button>
         <button class="del" onclick="event.stopPropagation();delRecord('${l._id}')">🗑 ลบ</button></div>`:""}
     </div>`;
@@ -704,6 +707,7 @@ function openRecord(id){
   $("rOccurred").value=isoToLocal(l?.occurredAt);
   setSeg(l?.direction||""); setType(l?.itemType||""); setPerson(l?.personType||"");
   $("rTypeOther").value=l?.itemTypeOther||"";
+  $("rSource").value=l?.source||"";
   $("rInName").value=l?.internalName||"";$("rInSurname").value=l?.internalSurname||"";
   $("rInPhone").value=l?.internalPhone||"";$("rInDept").value=l?.internalDept||"";
   $("rExName").value=l?.externalName||"";
@@ -764,7 +768,7 @@ async function saveRecord(){
   if(!type)return toast("⚠️ เลือกประเภทของ");
   if(type==="other"&&!$("rTypeOther").value.trim())return toast("⚠️ พิมพ์ระบุประเภทของ (อื่นๆ)");
   if(!mItem.length)return toast("⚠️ ถ่ายรูปพัสดุอย่างน้อย 1 รูป");
-  if(!person)return toast("⚠️ เลือกผู้เกี่ยวข้อง");
+  if(!person)return toast("⚠️ เลือกผู้รับ / ปลายทาง");
   let inName="",inSur="",inPhone="",inDept="",exName="";
   if(person==="internal"){
     inName=$("rInName").value.trim();inSur=$("rInSurname").value.trim();
@@ -793,7 +797,7 @@ async function saveRecord(){
     }
     const data={
       occurredAt:localToIso($("rOccurred").value),
-      project,direction:seg,itemType:type,itemTypeOther:type==="other"?$("rTypeOther").value.trim():"",personType:person,
+      project,direction:seg,itemType:type,itemTypeOther:type==="other"?$("rTypeOther").value.trim():"",source:$("rSource").value.trim(),personType:person,
       status:existing?.status||"pending",
       internalName:inName,internalSurname:inSur,internalPhone:inPhone,internalDept:inDept,
       externalName:exName,idCardPhotos,itemPhotos,items,
@@ -920,7 +924,8 @@ async function openDetail(id){
     +row("สถานะ",l.status==="delivered"?"✅ ส่งมอบแล้ว 🔒":"⏳ ค้างอยู่")
     +row("ทิศทาง",l.direction==="in"?"⬇ รับเข้า":"⬆ ส่งออก")
     +row("ประเภท",esc(typeLabel(l))||"-")
-    +row("ผู้เกี่ยวข้อง",who)
+    +(l.source?row("รับมาจาก / ต้นทาง",esc(l.source)):"")
+    +row("ผู้รับ / ปลายทาง",who)
     +row("วันเวลารับ-ส่ง",fmtDate(l.occurredAt||l.createdAt))
     +row("ผู้บันทึก",esc(l.recordedBy||"-"));
   if(l.status==="delivered")h+=row("ส่งมอบให้",esc(l.deliveredTo||"-"))+(l.deliveredPhone?row("เบอร์ผู้รับมอบ","☎ "+esc(l.deliveredPhone)):"")+row("เมื่อ",fmtDate(l.deliveredAt));
@@ -959,7 +964,7 @@ function exportExcel(){
     "วันเวลารับ-ส่ง":fmtDate(l.occurredAt||l.createdAt),"โครงการ":l.project||"",
     "ทิศทาง":l.direction==="in"?"รับเข้า":"ส่งออก","ประเภท":typeText(l),
     "สถานะ":l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่",
-    "ผู้เกี่ยวข้อง":l.personType==="internal"?`${l.internalName||""} ${l.internalSurname||""} (${l.internalDept||""})`:(l.externalName||"บุคคลภายนอก"),
+    "รับมาจาก/ต้นทาง":l.source||"","ผู้รับ/ปลายทาง":l.personType==="internal"?`${l.internalName||""} ${l.internalSurname||""} (${l.internalDept||""})`:(l.externalName||"บุคคลภายนอก"),
     "เบอร์โทร":l.internalPhone||"","รายการของ":(l.items||[]).map(i=>`${i.description}${i.qty?" x"+i.qty:""}`).join(", "),
     "ผู้บันทึก":l.recordedBy||"","ส่งมอบให้":l.deliveredTo||"","เบอร์ผู้รับมอบ":l.deliveredPhone||"","วันที่ส่งมอบ":l.deliveredAt?fmtDate(l.deliveredAt):"","หมายเหตุ":l.notes||""
   }));
@@ -1017,7 +1022,7 @@ async function exportPdfReport(){
   toast("กำลังสร้าง PDF…");
   try{
     await loadPdf(); const font=_pdfFont();
-    const head=["#","วันที่","โครงการ","ทิศทาง","ประเภท","ผู้เกี่ยวข้อง","รายการของ","สถานะ","ผู้บันทึก"].map(t=>({text:t,bold:true,fillColor:"#e6f1ef",color:"#0f5b55"}));
+    const head=["#","วันที่","โครงการ","ทิศทาง","ประเภท","ผู้รับ/ปลายทาง","รายการของ","สถานะ","ผู้บันทึก"].map(t=>({text:t,bold:true,fillColor:"#e6f1ef",color:"#0f5b55"}));
     const body=[head,...list.map((l,i)=>[String(i+1),fmtDay(l.occurredAt||l.createdAt),l.project||"",l.direction==="in"?"รับเข้า":"ส่งออก",typeText(l),l.personType==="internal"?`${l.internalName||""} ${l.internalSurname||""}`.trim():(l.externalName||"ภายนอก"),(l.items||[]).map(x=>`${x.description}${x.qty?" ×"+x.qty:""}`).join(", "),l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่",l.recordedBy||""])];
     const docDef={pageSize:"A4",pageOrientation:"landscape",pageMargins:[24,40,24,32],defaultStyle:{font,fontSize:9},
       content:[{text:"รายงานการรับ-ส่ง พัสดุ/เอกสาร/กุญแจ",fontSize:15,bold:true,color:"#0f5b55"},
@@ -1044,7 +1049,8 @@ async function printSlip(id){
       {text:`ใบรับ-ส่ง ${l.direction==="in"?"(รับเข้า)":"(ส่งออก)"}`,fontSize:17,bold:true,color:"#0f5b55"},
       {text:l.project||"",fontSize:11,color:"#555",margin:[0,1,0,10]},
       {table:{widths:["auto","*"],body:rows},layout:"noBorders"},
-      {text:"ผู้เกี่ยวข้อง: "+who,margin:[0,8,0,2]},
+      l.source?{text:"รับมาจาก/ต้นทาง: "+l.source,margin:[0,8,0,2]}:"",
+      {text:"ผู้รับ/ปลายทาง: "+who,margin:[0,l.source?2:8,0,2]},
       {text:"รายการของ: "+items,margin:[0,2,0,2]},
       l.notes?{text:"หมายเหตุ: "+l.notes,margin:[0,2,0,2]}:"",
       itemImgs.length?{text:"รูปพัสดุ/ของ",bold:true,margin:[0,10,0,4]}:"",
