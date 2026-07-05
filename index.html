@@ -26,7 +26,7 @@
   --bg:#e9ede8;                                  /* neumorphic canvas */
   --lo:#cdd4cb; --hi:#fbfffb;                     /* soft shadow pair */
   --accent:#7a9a86; --accent-d:#5f7d6b; --accent-hi:#95b7a1;
-  --ink:#46564c; --muted:#8a9a8e;
+  --ink:#46564c; --muted:#5c6d61;   /* เข้มขึ้นให้ผ่าน WCAG AA (~4.6:1 บนพื้นเสจ) อ่านชัดกลางแดด */
   --ok:#6a9a78; --ok-bg:#dcebe0; --wait:#b08150; --wait-bg:#f0e4d4;
   --red:#bd7a72; --line:#d2dacf;
   --sh:5px 5px 12px var(--lo),-5px -5px 12px var(--hi);
@@ -779,9 +779,13 @@ async function saveRecord(){
     if(USE_FIREBASE&&db){
       await db.collection(COLLECTION).doc(recordId).set(data,{merge:true});
     }
-    if(editId){const idx=logs.findIndex(l=>l._id===editId);logs[idx]={_id:recordId,...data};}
-    else{logs.unshift({_id:recordId,...data});}
-    if(!(USE_FIREBASE&&db))saveLocal();
+    // Firebase mode: onSnapshot owns `logs` (adding here → duplicate card until next snapshot).
+    // Only mutate locally in localStorage-fallback mode.
+    if(!(USE_FIREBASE&&db)){
+      if(editId){const idx=logs.findIndex(l=>l._id===editId);logs[idx]={_id:recordId,...data};}
+      else{logs.unshift({_id:recordId,...data});}
+      saveLocal();
+    }
     localStorage.setItem(RECBY_KEY,recordedBy);
     closeSheet("recSheet"); refreshProjects(); render();
     toast(editId?"✅ แก้ไขแล้ว":"✅ บันทึกรายการใหม่แล้ว");
@@ -878,17 +882,13 @@ async function confirmDeliver(){
 // ━━━ DETAIL ━━━
 async function openDetail(id){
   const l=logs.find(x=>x._id===id); if(!l)return;
-  // รูปบัตร ปชช.: ไม่มี url ถาวร → ดึง base64 ผ่าน Cloud Function ตอนเปิด (auth-gated, transient)
-  const idImgs=(l.idCardPhotos||[]).map(p=>({...p}));
-  if(l.personType==="external"&&USE_FIREBASE&&fns){
-    for(const p of idImgs){ if(!p.url&&!p.dataUrl&&p.storagePath){ try{ const r=await fns.httpsCallable("getIdCardImage")({storagePath:p.storagePath}); p.dataUrl=r.data.dataUrl; }catch(e){ console.warn("idcard load failed",e); } } }
-  }
   const row=(k,v)=>`<div class="dl-row"><span class="k">${k}</span><span class="v">${v}</span></div>`;
   const who=l.personType==="internal"
     ? `${esc(l.internalName||"")} ${esc(l.internalSurname||"")} (${esc(l.internalDept||"-")}) · ☎ ${esc(l.internalPhone||"-")}`
     : esc(l.externalName||"บุคคลภายนอก");
   const items=(l.items||[]).map(i=>`${esc(i.description)}${i.qty?` ×${esc(String(i.qty))}`:""}`).join("<br>")||"-";
-  const gallery=t=>t.length?`<div class="dl-imgs">${t.map(p=>`<img src="${esc(imgSrc(p))}" onclick="viewImg('${esc(imgSrc(p))}')">`).join("")}</div>`:"<span style='color:var(--muted)'>—</span>";
+  const gallery=t=>t.length?`<div class="dl-imgs">${t.map(p=>`<img src="${esc(imgSrc(p))}" onclick="viewImg(this.src)">`).join("")}</div>`:"<span style='color:var(--muted)'>—</span>";
+  const isExt=l.personType==="external";
   let h=row("โครงการ",esc(l.project||"-"))
     +row("สถานะ",l.status==="delivered"?"✅ ส่งมอบแล้ว 🔒":"⏳ ค้างอยู่")
     +row("ทิศทาง",l.direction==="in"?"⬇ รับเข้า":"⬆ ส่งออก")
@@ -899,12 +899,24 @@ async function openDetail(id){
   if(l.status==="delivered")h+=row("ส่งมอบให้",esc(l.deliveredTo||"-"))+row("เมื่อ",fmtDate(l.deliveredAt));
   h+=`<label class="flabel">รายการของ</label><div class="items" style="font-size:13px">${items}</div>`;
   h+=`<label class="flabel">รูปพัสดุ/ของ</label>${gallery(l.itemPhotos||[])}`;
-  if(l.personType==="external")h+=`<label class="flabel">รูปบัตรประชาชน 🔒</label>${gallery(idImgs)}`;
+  if(isExt)h+=`<label class="flabel">รูปบัตรประชาชน 🔒</label><div id="idcardGallery"><span style="color:var(--muted);font-size:12.5px">⏳ กำลังโหลดรูปบัตร…</span></div>`;
   if(l.notes)h+=`<label class="flabel">หมายเหตุ</label><div class="items" style="font-size:13px">${esc(l.notes)}</div>`;
-  h+=`<button class="fsave" style="background:#7a3d1f" onclick="printSlip('${l._id}')">🖨️ พิมพ์ใบรับ-ส่ง (PDF)</button>`;
+  h+=`<button class="fsave" style="background:var(--accent-d)" onclick="printSlip('${l._id}')">🖨️ พิมพ์ใบรับ-ส่ง (PDF)</button>`;
   if(l.status!=="delivered")h+=`<button class="iadd" style="margin-top:10px" onclick="closeSheet('detSheet');openRecord('${l._id}')">✏️ แก้ไขรายการ</button>`;
   $("detBody").innerHTML=h;
-  openSheet("detSheet");
+  openSheet("detSheet");   // เปิดทันที — ไม่รอโหลดรูปบัตร (กันดูค้าง ~5s ตอน CF cold-start)
+  // รูปบัตร: lazy-load base64 ผ่าน Cloud Function แล้วเติมใน placeholder (race-guard ถ้าปิด sheet ก่อน)
+  if(isExt&&(l.idCardPhotos||[]).length){
+    const el=document.getElementById("idcardGallery");
+    if(USE_FIREBASE&&fns){
+      const idImgs=l.idCardPhotos.map(p=>({...p}));
+      for(const p of idImgs){ if(!p.url&&!p.dataUrl&&p.storagePath){ try{ const r=await fns.httpsCallable("getIdCardImage")({storagePath:p.storagePath}); p.dataUrl=r.data.dataUrl; }catch(e){ console.warn("idcard load failed",e); } } }
+      if(el&&$("detSheet").classList.contains("open")){
+        const ok=idImgs.filter(p=>imgSrc(p));
+        el.innerHTML = ok.length? gallery(ok) : "<span style='color:var(--red);font-size:12.5px'>โหลดรูปบัตรไม่สำเร็จ</span>";
+      }
+    } else if(el){ el.innerHTML=gallery(l.idCardPhotos); }
+  }
 }
 
 // ━━━ image viewer ━━━
