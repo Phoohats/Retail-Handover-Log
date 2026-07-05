@@ -7,21 +7,20 @@ service firebase.storage {
     // รูปบัตรประชาชน — เขียนได้ (auth + รูป + จำกัดขนาด) แต่ "ห้ามอ่าน/ไล่ดู" ผ่าน SDK
     // ดูรูปได้เฉพาะผ่าน downloadURL (มี token) ที่บันทึกไว้ใน Firestore doc → enumerate ไม่ได้
     match /parcelLog/{recordId}/idcard/{file} {
-      // guard: ตอน delete request.resource=null → ต้องยอมให้ลบได้ (ไม่งั้น orphan files)
-      allow write: if request.auth != null
-        && (request.resource == null
-            || (request.resource.size < 5 * 1024 * 1024
-                && request.resource.contentType.matches('image/.*')));
-      allow read: if false;
+      // รูปบัตร ปชช. = admin SDK (Cloud Function) เท่านั้น — client เข้าไม่ได้เลย (ADR-002)
+      // อัป: callable uploadIdCard · อ่าน: callable getIdCardImage (ตรวจ auth)
+      allow read, write: if false;
     }
 
     // รูปพัสดุ + ลายเซ็น — ไม่ sensitive เท่า อ่านได้ถ้าผ่าน auth
+    // ⚠️ ต้อง exclude idcard: path idcard match block นี้ด้วย (kind='idcard') และ
+    //    Storage rules เป็น OR → ถ้าไม่กัน generic นี้จะ grant read ทับ read:false ข้างบน
     match /parcelLog/{recordId}/{kind}/{file} {
-      allow write: if request.auth != null
+      allow write: if request.auth != null && kind != 'idcard'
         && (request.resource == null
             || (request.resource.size < 5 * 1024 * 1024
                 && request.resource.contentType.matches('image/.*')));
-      allow read: if request.auth != null;
+      allow read: if request.auth != null && kind != 'idcard';
     }
   }
 }

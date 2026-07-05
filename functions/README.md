@@ -1,4 +1,12 @@
-# ID Card via Cloud Function — activation checklist (strategy A)
+# ID Card via Cloud Function — strategy A
+
+> ✅ **ACTIVATED 2026-07-04** — deployed to `retail-handover-log` (Blaze) + client wired + verified live.
+> 3 callables live in `us-central1`: `uploadIdCard`, `getIdCardImage` (returns base64, not signed URL),
+> `deleteIdCards`. Storage `.../idcard/**` locked (`read,write:if false` **+** `kind!='idcard'` on the
+> broad block — Storage rules are OR-ed, the broad allow was overriding the deny). Checklist below kept
+> for reference / redeploy.
+
+## (original) activation checklist
 
 รูปบัตรประชาชน = PDPA sensitive. ดีไซน์เดิม ("Storage `read:false` + เก็บ tokenized URL ใน Firestore")
 **ทำ client-only ไม่ได้จริง** และถึงทำได้ก็รั่ว (ดู P-report BUG-1 / BUG-2). ทางที่เลือก = **A · Cloud Function**.

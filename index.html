@@ -241,6 +241,7 @@ table.pr-t th{background:#f0e6df}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 <!-- SheetJS สำหรับ export Excel -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 </head>
@@ -482,11 +483,11 @@ const SEED_PROJECTS = [
 const TYPE_LABEL = {parcel:"📦 พัสดุ",document:"📄 เอกสาร",key:"🔑 กุญแจ",sticker:"🏷️ สติ๊กเกอร์",keycard:"💳 คีย์การ์ด",accesscard:"🎫 บัตรผ่าน"};
 
 // ━━━ Firebase init ━━━
-let auth=null, db=null, storage=null;
+let auth=null, db=null, storage=null, fns=null;
 if(USE_FIREBASE){
   try{
     if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    auth=firebase.auth(); db=firebase.firestore(); storage=firebase.storage();
+    auth=firebase.auth(); db=firebase.firestore(); storage=firebase.storage(); fns=firebase.functions();
     db.settings({ignoreUndefinedProperties:true});
   }catch(e){ console.error("Firebase init failed",e); auth=db=storage=null; }
 }
@@ -568,12 +569,22 @@ async function uploadPhoto(recordId,kind,ph,idx){
   return {dataUrl:ph.dataUrl,addedAt:ph.addedAt||new Date().toISOString()};
 }
 // process a modal photo array → persisted descriptors (upload new ones, keep existing)
+function blobToDataUrl(blob){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(blob);});}
+// รูปบัตร ปชช. อัปผ่าน Cloud Function (admin SDK) — client ไม่ put ตรง (ADR-002) · doc เก็บแค่ storagePath
+async function uploadIdCardViaFn(recordId,idx,ph){
+  const dataBase64 = ph.dataUrl || (ph.blob? await blobToDataUrl(ph.blob) : null);
+  const r = await fns.httpsCallable("uploadIdCard")({recordId,idx,dataBase64,contentType:"image/jpeg"});
+  return { storagePath: r.data.storagePath, addedAt:new Date().toISOString() };
+}
 async function processPhotos(recordId,kind,arr){
   const out=[];
   for(let i=0;i<arr.length;i++){
     const ph=arr[i];
-    if(ph.url||(!ph.blob&&ph.dataUrl&&!USE_FIREBASE)){ out.push(ph.url?{storagePath:ph.storagePath,url:ph.url,addedAt:ph.addedAt}:{dataUrl:ph.dataUrl,addedAt:ph.addedAt}); }
-    else{ out.push(await uploadPhoto(recordId,kind,ph,i)); }
+    if(ph.url){ out.push({storagePath:ph.storagePath,url:ph.url,addedAt:ph.addedAt}); continue; }      // existing Storage (item)
+    if(ph.storagePath&&!ph.blob){ out.push({storagePath:ph.storagePath,addedAt:ph.addedAt}); continue; } // existing idcard (no url)
+    if(!ph.blob&&ph.dataUrl&&!USE_FIREBASE){ out.push({dataUrl:ph.dataUrl,addedAt:ph.addedAt}); continue; } // fallback base64
+    if(USE_FIREBASE&&kind==="idcard"){ out.push(await uploadIdCardViaFn(recordId,i,ph)); }               // NEW idcard → CF
+    else{ out.push(await uploadPhoto(recordId,kind,ph,i)); }                                              // NEW item/signature
   }
   return out;
 }
@@ -641,7 +652,7 @@ function render(){
       ? `${esc(l.internalName||"")} ${esc(l.internalSurname||"")}`.trim()+` <span style="color:var(--muted);font-weight:300">· ${esc(l.internalDept||"-")}</span>`
       : esc(l.externalName||"บุคคลภายนอก");
     const items=(l.items||[]).map(i=>`${esc(i.description)}${i.qty?` ×${esc(String(i.qty))}`:""}`).join(" · ")||"-";
-    const th=[...(l.itemPhotos||[]),...(l.idCardPhotos||[])].slice(0,3).map(p=>`<img src="${esc(imgSrc(p))}">`).join("");
+    const th=(l.itemPhotos||[]).slice(0,3).map(p=>`<img src="${esc(imgSrc(p))}">`).join("");
     return `<div class="card ${locked?"done":""}" onclick="openDetail('${l._id}')">
       <div class="c1"><span class="proj">${esc(l.project||"-")}</span>
         <span class="st ${locked?"ok lock":"wait"}">${locked?"ส่งมอบแล้ว":"ค้างอยู่"}</span></div>
@@ -784,7 +795,8 @@ async function delRecord(id){
   if(!confirm("ยืนยันลบรายการนี้? (ลบรูปที่แนบด้วย)"))return;
   try{
     if(USE_FIREBASE&&db){
-      if(storage){for(const p of [...(l.itemPhotos||[]),...(l.idCardPhotos||[])]){if(p.storagePath){try{await storage.ref().child(p.storagePath).delete();}catch(_){}}}}
+      if(storage){for(const p of (l.itemPhotos||[])){if(p.storagePath){try{await storage.ref().child(p.storagePath).delete();}catch(_){}}}}
+      if(fns&&(l.idCardPhotos||[]).length){try{await fns.httpsCallable("deleteIdCards")({recordId:id});}catch(_){}} // idcard = admin-only
       await db.collection(COLLECTION).doc(id).delete();
     }
     logs=logs.filter(x=>x._id!==id);
@@ -864,8 +876,13 @@ async function confirmDeliver(){
 }
 
 // ━━━ DETAIL ━━━
-function openDetail(id){
+async function openDetail(id){
   const l=logs.find(x=>x._id===id); if(!l)return;
+  // รูปบัตร ปชช.: ไม่มี url ถาวร → ดึง base64 ผ่าน Cloud Function ตอนเปิด (auth-gated, transient)
+  const idImgs=(l.idCardPhotos||[]).map(p=>({...p}));
+  if(l.personType==="external"&&USE_FIREBASE&&fns){
+    for(const p of idImgs){ if(!p.url&&!p.dataUrl&&p.storagePath){ try{ const r=await fns.httpsCallable("getIdCardImage")({storagePath:p.storagePath}); p.dataUrl=r.data.dataUrl; }catch(e){ console.warn("idcard load failed",e); } } }
+  }
   const row=(k,v)=>`<div class="dl-row"><span class="k">${k}</span><span class="v">${v}</span></div>`;
   const who=l.personType==="internal"
     ? `${esc(l.internalName||"")} ${esc(l.internalSurname||"")} (${esc(l.internalDept||"-")}) · ☎ ${esc(l.internalPhone||"-")}`
@@ -882,7 +899,7 @@ function openDetail(id){
   if(l.status==="delivered")h+=row("ส่งมอบให้",esc(l.deliveredTo||"-"))+row("เมื่อ",fmtDate(l.deliveredAt));
   h+=`<label class="flabel">รายการของ</label><div class="items" style="font-size:13px">${items}</div>`;
   h+=`<label class="flabel">รูปพัสดุ/ของ</label>${gallery(l.itemPhotos||[])}`;
-  if(l.personType==="external")h+=`<label class="flabel">รูปบัตรประชาชน 🔒</label>${gallery(l.idCardPhotos||[])}`;
+  if(l.personType==="external")h+=`<label class="flabel">รูปบัตรประชาชน 🔒</label>${gallery(idImgs)}`;
   if(l.notes)h+=`<label class="flabel">หมายเหตุ</label><div class="items" style="font-size:13px">${esc(l.notes)}</div>`;
   h+=`<button class="fsave" style="background:#7a3d1f" onclick="printSlip('${l._id}')">🖨️ พิมพ์ใบรับ-ส่ง (PDF)</button>`;
   if(l.status!=="delivered")h+=`<button class="iadd" style="margin-top:10px" onclick="closeSheet('detSheet');openRecord('${l._id}')">✏️ แก้ไขรายการ</button>`;

@@ -43,6 +43,26 @@ ADR-001 ออกแบบให้รูปบัตร ปชช. ปลอด
 - **defer "ปลดล็อกเพื่อแก้" ไป Firebase Console เฟสแรก** — ถูก (ไม่ต้องมี CF สำหรับ unlock)
 - รูปพัสดุ/ลายเซ็นผ่าน Storage (`read: if auth`) — verified สด upload/read/delete
 
+## Implementation notes (2026-07-04 — DEPLOYED to retail-handover-log, verified live)
+
+3 gen2 callables live in `us-central1`: `uploadIdCard`, `getIdCardImage`, `deleteIdCards`.
+Two deviations from the original sketch, both found/decided during live activation:
+
+1. **Read returns base64, not a signed URL.** `getSignedUrl()` from Cloud Functions
+   needs the runtime service account to have IAM `signBlob` (usually manual setup).
+   `getIdCardImage` instead `download()`s the file and returns a base64 dataUrl —
+   works on the default SA out of the box; ID cards are few + viewed rarely.
+2. **Storage rule overlap had to be closed.** `read,write:if false` on
+   `.../idcard/**` did **not** lock it, because the broad
+   `.../{kind}/{file}` block (`read:if auth`) also matches idcard paths and
+   **Storage rules are OR-ed** — the broad allow overrode the specific deny.
+   Fixed by adding `&& kind != 'idcard'` to the broad block. Verified live:
+   client `getDownloadURL`/`getMetadata` on an idcard path now `storage/unauthorized`.
+   → [[07-Failure-Library/Failure - Firebase Storage broad wildcard match overrides a specific deny (OR-ed rules)]]
+
+`deleteIdCards` (admin) removes the idcard folder on record delete (client can't,
+write:false) so ID photos don't orphan.
+
 ## Related
 - Bug detail: `reports/p-report-handover-qa-20260704.html` (BUG-1/BUG-2/BUG-11)
 - Function code + checklist: `functions/index.js`, `functions/README.md`
