@@ -8,6 +8,7 @@
       "PLAN.md",
       "HANDOFF.md",
       "README.md",
+      "*.rules",
       "design/**",
       "docs/**",
       "reports/**",
