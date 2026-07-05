@@ -394,6 +394,14 @@ table.pr-t th{background:#f0e6df}
       <label class="flabel" for="rRecordedBy">ผู้บันทึก <span class="req">*</span></label>
       <input class="finput" id="rRecordedBy" placeholder="ชื่อผู้บันทึกรายการนี้">
 
+      <label class="flabel">ลายเซ็นผู้เกี่ยวข้อง (ถ้ามี · ไม่บังคับ)</label>
+      <div class="sigwrap">
+        <canvas id="sigPadRec" class="sigcanvas"></canvas>
+        <button type="button" class="sigclear" onclick="sigRec&&sigRec.clear()">ล้าง ✕</button>
+        <span class="sighint">เซ็นตอนรับ-ส่งได้เลย</span>
+      </div>
+      <div id="recSigNote" style="display:none;font-size:11px;color:var(--muted);margin-top:6px"></div>
+
       <button class="fsave" id="recSaveBtn" onclick="saveRecord()">บันทึกรายการ</button>
     </div>
   </div>
@@ -468,7 +476,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "1041378515383",
   appId:             "1:1041378515383:web:8c3c35aae35f7f84957032"
 };
-const PASSCODE = "1234";               // 🔑 Plue กำหนดรหัสทีมตรงนี้
+const PASSCODE = "123456";             // 🔑 รหัสทีม (Plue กำหนด 2026-07-05)
 const SIGNATURE_READY = true;          // signature pad (canvas) พร้อมใช้ · บังคับเซ็นตอนส่งมอบ
 const USE_FIREBASE = (FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY");
 const COLLECTION = "parcelLog";
@@ -699,6 +707,10 @@ function openRecord(id){
   if(!mItems.length)mItems=[{description:"",qty:""}];
   renderItemRows();
   openSheet("recSheet");
+  sigRec=makeSigPad($("sigPadRec"));   // sync init (เหมือน deliver pad)
+  const rn=$("recSigNote");
+  if(l?.receiveSignature){ rn.style.display=""; rn.textContent="✔ มีลายเซ็นบันทึกไว้แล้ว — เซ็นใหม่เพื่อแทนที่ (เว้นว่างเพื่อคงเดิม)"; }
+  else{ rn.style.display="none"; }
 }
 
 // photo add + resize
@@ -764,6 +776,11 @@ async function saveRecord(){
     const recordId=editId||(USE_FIREBASE&&db?db.collection(COLLECTION).doc().id:"local_"+Date.now()+"_"+Math.random().toString(36).slice(2,7));
     const itemPhotos=await processPhotos(recordId,"item",mItem);
     const idCardPhotos=person==="external"?await processPhotos(recordId,"idcard",mId):[];
+    // receive signature (optional · decision 14): เซ็นใหม่=อัปแทน, เว้นว่าง=คงเดิม
+    let receiveSignature=existing?.receiveSignature||null;
+    if(sigRec && !sigRec.isEmpty()){
+      receiveSignature=await uploadPhoto(recordId,"signature",{dataUrl:sigRec.dataUrl(),blob:null},"recv");
+    }
     const data={
       occurredAt:localToIso($("rOccurred").value),
       project,direction:seg,itemType:type,personType:person,
@@ -772,7 +789,7 @@ async function saveRecord(){
       externalName:exName,idCardPhotos,itemPhotos,items,
       notes:$("rNotes").value.trim(),recordedBy,
       createdAt:existing?.createdAt||now,updatedAt:now,
-      receiveSignature:existing?.receiveSignature||null,
+      receiveSignature,
       deliveredAt:existing?.deliveredAt||null,deliveredTo:existing?.deliveredTo||null,
       deliverSignature:existing?.deliverSignature||null
     };
@@ -799,7 +816,7 @@ async function delRecord(id){
   if(!confirm("ยืนยันลบรายการนี้? (ลบรูปที่แนบด้วย)"))return;
   try{
     if(USE_FIREBASE&&db){
-      if(storage){for(const p of (l.itemPhotos||[])){if(p.storagePath){try{await storage.ref().child(p.storagePath).delete();}catch(_){}}}}
+      if(storage){for(const p of [...(l.itemPhotos||[]),...(l.receiveSignature?[l.receiveSignature]:[])]){if(p.storagePath){try{await storage.ref().child(p.storagePath).delete();}catch(_){}}}}
       if(fns&&(l.idCardPhotos||[]).length){try{await fns.httpsCallable("deleteIdCards")({recordId:id});}catch(_){}} // idcard = admin-only
       await db.collection(COLLECTION).doc(id).delete();
     }
@@ -811,7 +828,7 @@ async function delRecord(id){
 
 // ━━━ DELIVER ━━━
 // canvas signature pad — pointer events (นิ้ว/เมาส์/ปากกา) · decision 14
-let sig=null;
+let sig=null, sigRec=null;
 // hardened per Retail-Inspection-APP: touch+pointer events, dpr sizing,
 // clone-reset (no window-listener leak), white-bg scaled snapshot
 function makeSigPad(canvas){
@@ -899,6 +916,7 @@ async function openDetail(id){
   if(l.status==="delivered")h+=row("ส่งมอบให้",esc(l.deliveredTo||"-"))+row("เมื่อ",fmtDate(l.deliveredAt));
   h+=`<label class="flabel">รายการของ</label><div class="items" style="font-size:13px">${items}</div>`;
   h+=`<label class="flabel">รูปพัสดุ/ของ</label>${gallery(l.itemPhotos||[])}`;
+  if(l.receiveSignature)h+=`<label class="flabel">ลายเซ็นผู้เกี่ยวข้อง (ตอนรับ-ส่ง)</label>${gallery([l.receiveSignature])}`;
   if(isExt)h+=`<label class="flabel">รูปบัตรประชาชน 🔒</label><div id="idcardGallery"><span style="color:var(--muted);font-size:12.5px">⏳ กำลังโหลดรูปบัตร…</span></div>`;
   if(l.notes)h+=`<label class="flabel">หมายเหตุ</label><div class="items" style="font-size:13px">${esc(l.notes)}</div>`;
   h+=`<button class="fsave" style="background:var(--accent-d)" onclick="printSlip('${l._id}')">🖨️ พิมพ์ใบรับ-ส่ง (PDF)</button>`;
@@ -1006,6 +1024,7 @@ async function printSlip(id){
     await loadPdf(); const font=_pdfFont();
     const itemImgs=[]; for(const p of (l.itemPhotos||[])){ const d=await _imgToData(imgSrc(p)); if(d)itemImgs.push({image:d,fit:[120,90],margin:[0,0,8,8]}); }
     const sigData=l.deliverSignature?await _imgToData(imgSrc(l.deliverSignature)):null;
+    const recvSig=l.receiveSignature?await _imgToData(imgSrc(l.receiveSignature)):null;
     const who=l.personType==="internal"?`${l.internalName||""} ${l.internalSurname||""} (${l.internalDept||"-"}) · ☎ ${l.internalPhone||"-"}`:(l.externalName||"บุคคลภายนอก");
     const items=(l.items||[]).map(i=>`${i.description}${i.qty?` ×${i.qty}`:""}`).join(", ")||"-";
     const info=(k,v)=>[{text:k,bold:true,color:"#555",margin:[0,1,0,1]},{text:v||"-",margin:[0,1,0,1]}];
@@ -1021,7 +1040,7 @@ async function printSlip(id){
       itemImgs.length?{text:"รูปพัสดุ/ของ",bold:true,margin:[0,10,0,4]}:"",
       itemImgs.length?{columns:itemImgs,columnGap:0}:"",
       {columns:[
-        {width:"50%",stack:[{text:"____________________",margin:[0,30,0,2]},{text:"ผู้ส่งมอบ",alignment:"center",fontSize:10,color:"#555"}]},
+        {width:"50%",stack:[ recvSig?{image:recvSig,fit:[180,70],alignment:"center"}:{text:"____________________",margin:[0,30,0,2]}, {text:"ผู้ส่งมอบ/ผู้นำส่ง",alignment:"center",fontSize:10,color:"#555"}]},
         {width:"50%",stack:[ sigData?{image:sigData,fit:[180,70],alignment:"center"}:{text:"____________________",margin:[0,30,0,2]}, {text:"ผู้รับมอบ"+(l.deliveredTo?` (${l.deliveredTo})`:""),alignment:"center",fontSize:10,color:"#555",margin:[0,4,0,0]}]}
       ],margin:[0,20,0,0]}
     ]};
