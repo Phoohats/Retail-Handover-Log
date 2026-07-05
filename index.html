@@ -293,6 +293,7 @@ table.pr-t th{background:#f0e6df}
         <option value="parcel">📦 พัสดุ</option><option value="document">📄 เอกสาร</option>
         <option value="key">🔑 กุญแจ</option><option value="sticker">🏷️ สติ๊กเกอร์</option>
         <option value="keycard">💳 คีย์การ์ด</option><option value="accesscard">🎫 บัตรผ่าน</option>
+        <option value="other">✏️ อื่นๆ (พิมพ์เอง)</option>
       </select>
     </div>
     <div class="fg"><label>จากวันที่</label><input type="date" id="fltFrom" onchange="render()"></div>
@@ -351,7 +352,9 @@ table.pr-t th{background:#f0e6df}
         <button type="button" data-t="sticker" onclick="setType('sticker')"><span class="e">🏷️</span>สติ๊กเกอร์</button>
         <button type="button" data-t="keycard" onclick="setType('keycard')"><span class="e">💳</span>คีย์การ์ด</button>
         <button type="button" data-t="accesscard" onclick="setType('accesscard')"><span class="e">🎫</span>บัตรผ่าน</button>
+        <button type="button" data-t="other" onclick="setType('other')"><span class="e">✏️</span>อื่นๆ</button>
       </div>
+      <input class="finput" id="rTypeOther" placeholder="ระบุประเภท (เช่น พัสดุแตกง่าย, ของมีค่า)" style="display:none;margin-top:8px" maxlength="40">
 
       <label class="flabel">รูปพัสดุ/ของ <span class="req">* (บังคับ ≥1)</span></label>
       <div class="cam" onclick="document.getElementById('itemPhotoInput').click()">
@@ -489,6 +492,9 @@ const SEED_PROJECTS = [
   "Unio Serithai","IDEO Mobi Rama 9"
 ];
 const TYPE_LABEL = {parcel:"📦 พัสดุ",document:"📄 เอกสาร",key:"🔑 กุญแจ",sticker:"🏷️ สติ๊กเกอร์",keycard:"💳 คีย์การ์ด",accesscard:"🎫 บัตรผ่าน"};
+// ประเภท "อื่นๆ" (พิมพ์เอง) → itemType='other' + itemTypeOther. typeLabel=UI(มี emoji, ต้อง esc), typeText=export(plain)
+function typeLabel(l){return l.itemType==="other"?("✏️ "+(l.itemTypeOther||"อื่นๆ")):(TYPE_LABEL[l.itemType]||l.itemType||"");}
+function typeText(l){return l.itemType==="other"?(l.itemTypeOther||"อื่นๆ"):(TYPE_LABEL[l.itemType]||"").replace(/[^฀-๿a-zA-Z0-9 ]/g,"").trim();}
 
 // ━━━ Firebase init ━━━
 let auth=null, db=null, storage=null, fns=null;
@@ -665,7 +671,7 @@ function render(){
       <div class="c1"><span class="proj">${esc(l.project||"-")}</span>
         <span class="st ${locked?"ok lock":"wait"}">${locked?"ส่งมอบแล้ว":"ค้างอยู่"}</span></div>
       <div class="tags"><span class="tag ${l.direction}">${l.direction==="in"?"⬇ รับเข้า":"⬆ ส่งออก"}</span>
-        <span class="tag ty">${TYPE_LABEL[l.itemType]||l.itemType||""}</span>
+        <span class="tag ty">${esc(typeLabel(l))}</span>
         <span class="tag pn">${l.personType==="internal"?"🧑‍💼 พนักงาน":"👤 ภายนอก"}</span></div>
       <div class="who">${who}</div>
       <div class="items">📋 ${items}</div>
@@ -684,7 +690,7 @@ function closeSheet(id){$(id).classList.remove("open"); if(id==="expSheet")syncN
 
 // ━━━ RECORD modal ━━━
 function setSeg(v){seg=v;$("segIn").className=v==="in"?"on-in":"";$("segOut").className=v==="out"?"on-out":"";}
-function setType(v){type=v;document.querySelectorAll("#typeGrid button").forEach(b=>b.classList.toggle("on",b.dataset.t===v));}
+function setType(v){type=v;document.querySelectorAll("#typeGrid button").forEach(b=>b.classList.toggle("on",b.dataset.t===v));$("rTypeOther").style.display=v==="other"?"":"none";}
 function setPerson(v){person=v;$("ptIn").className=v==="internal"?"on":"";$("ptEx").className=v==="external"?"on":"";
   $("internalBlock").style.display=v==="internal"?"":"none";$("externalBlock").style.display=v==="external"?"":"none";}
 
@@ -695,6 +701,7 @@ function openRecord(id){
   $("rProject").value=l?.project||"";
   $("rOccurred").value=isoToLocal(l?.occurredAt);
   setSeg(l?.direction||""); setType(l?.itemType||""); setPerson(l?.personType||"");
+  $("rTypeOther").value=l?.itemTypeOther||"";
   $("rInName").value=l?.internalName||"";$("rInSurname").value=l?.internalSurname||"";
   $("rInPhone").value=l?.internalPhone||"";$("rInDept").value=l?.internalDept||"";
   $("rExName").value=l?.externalName||"";
@@ -753,6 +760,7 @@ async function saveRecord(){
   if(!$("rOccurred").value)return toast("⚠️ ระบุวันเวลาที่รับ-ส่ง");
   if(!seg)return toast("⚠️ เลือกทิศทาง");
   if(!type)return toast("⚠️ เลือกประเภทของ");
+  if(type==="other"&&!$("rTypeOther").value.trim())return toast("⚠️ พิมพ์ระบุประเภทของ (อื่นๆ)");
   if(!mItem.length)return toast("⚠️ ถ่ายรูปพัสดุอย่างน้อย 1 รูป");
   if(!person)return toast("⚠️ เลือกผู้เกี่ยวข้อง");
   let inName="",inSur="",inPhone="",inDept="",exName="";
@@ -783,7 +791,7 @@ async function saveRecord(){
     }
     const data={
       occurredAt:localToIso($("rOccurred").value),
-      project,direction:seg,itemType:type,personType:person,
+      project,direction:seg,itemType:type,itemTypeOther:type==="other"?$("rTypeOther").value.trim():"",personType:person,
       status:existing?.status||"pending",
       internalName:inName,internalSurname:inSur,internalPhone:inPhone,internalDept:inDept,
       externalName:exName,idCardPhotos,itemPhotos,items,
@@ -909,7 +917,7 @@ async function openDetail(id){
   let h=row("โครงการ",esc(l.project||"-"))
     +row("สถานะ",l.status==="delivered"?"✅ ส่งมอบแล้ว 🔒":"⏳ ค้างอยู่")
     +row("ทิศทาง",l.direction==="in"?"⬇ รับเข้า":"⬆ ส่งออก")
-    +row("ประเภท",TYPE_LABEL[l.itemType]||l.itemType||"-")
+    +row("ประเภท",esc(typeLabel(l))||"-")
     +row("ผู้เกี่ยวข้อง",who)
     +row("วันเวลารับ-ส่ง",fmtDate(l.occurredAt||l.createdAt))
     +row("ผู้บันทึก",esc(l.recordedBy||"-"));
@@ -947,7 +955,7 @@ function exportExcel(){
   if(!list.length)return toast("ไม่มีรายการให้ส่งออก");
   const rows=list.map(l=>({
     "วันเวลารับ-ส่ง":fmtDate(l.occurredAt||l.createdAt),"โครงการ":l.project||"",
-    "ทิศทาง":l.direction==="in"?"รับเข้า":"ส่งออก","ประเภท":(TYPE_LABEL[l.itemType]||"").replace(/[^฀-๿a-zA-Z ]/g,"").trim(),
+    "ทิศทาง":l.direction==="in"?"รับเข้า":"ส่งออก","ประเภท":typeText(l),
     "สถานะ":l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่",
     "ผู้เกี่ยวข้อง":l.personType==="internal"?`${l.internalName||""} ${l.internalSurname||""} (${l.internalDept||""})`:(l.externalName||"บุคคลภายนอก"),
     "เบอร์โทร":l.internalPhone||"","รายการของ":(l.items||[]).map(i=>`${i.description}${i.qty?" x"+i.qty:""}`).join(", "),
@@ -1008,7 +1016,7 @@ async function exportPdfReport(){
   try{
     await loadPdf(); const font=_pdfFont();
     const head=["#","วันที่","โครงการ","ทิศทาง","ประเภท","ผู้เกี่ยวข้อง","รายการของ","สถานะ","ผู้บันทึก"].map(t=>({text:t,bold:true,fillColor:"#e6f1ef",color:"#0f5b55"}));
-    const body=[head,...list.map((l,i)=>[String(i+1),fmtDay(l.occurredAt||l.createdAt),l.project||"",l.direction==="in"?"รับเข้า":"ส่งออก",(TYPE_LABEL[l.itemType]||"").replace(/[^฀-๿ ]/g,"").trim(),l.personType==="internal"?`${l.internalName||""} ${l.internalSurname||""}`.trim():(l.externalName||"ภายนอก"),(l.items||[]).map(x=>`${x.description}${x.qty?" ×"+x.qty:""}`).join(", "),l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่",l.recordedBy||""])];
+    const body=[head,...list.map((l,i)=>[String(i+1),fmtDay(l.occurredAt||l.createdAt),l.project||"",l.direction==="in"?"รับเข้า":"ส่งออก",typeText(l),l.personType==="internal"?`${l.internalName||""} ${l.internalSurname||""}`.trim():(l.externalName||"ภายนอก"),(l.items||[]).map(x=>`${x.description}${x.qty?" ×"+x.qty:""}`).join(", "),l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่",l.recordedBy||""])];
     const docDef={pageSize:"A4",pageOrientation:"landscape",pageMargins:[24,40,24,32],defaultStyle:{font,fontSize:9},
       content:[{text:"รายงานการรับ-ส่ง พัสดุ/เอกสาร/กุญแจ",fontSize:15,bold:true,color:"#0f5b55"},
         {text:`พิมพ์เมื่อ ${fmtDate(new Date().toISOString())} · รวม ${list.length} รายการ`,fontSize:9,color:"#666",margin:[0,2,0,10]},
@@ -1028,7 +1036,7 @@ async function printSlip(id){
     const who=l.personType==="internal"?`${l.internalName||""} ${l.internalSurname||""} (${l.internalDept||"-"}) · ☎ ${l.internalPhone||"-"}`:(l.externalName||"บุคคลภายนอก");
     const items=(l.items||[]).map(i=>`${i.description}${i.qty?` ×${i.qty}`:""}`).join(", ")||"-";
     const info=(k,v)=>[{text:k,bold:true,color:"#555",margin:[0,1,0,1]},{text:v||"-",margin:[0,1,0,1]}];
-    const rows=[info("ประเภท:",(TYPE_LABEL[l.itemType]||"").replace(/[^฀-๿ ]/g,"").trim()),info("สถานะ:",l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่"),info("วันเวลารับ-ส่ง:",fmtDate(l.occurredAt||l.createdAt)),info("ผู้บันทึก:",l.recordedBy)];
+    const rows=[info("ประเภท:",typeText(l)),info("สถานะ:",l.status==="delivered"?"ส่งมอบแล้ว":"ค้างอยู่"),info("วันเวลารับ-ส่ง:",fmtDate(l.occurredAt||l.createdAt)),info("ผู้บันทึก:",l.recordedBy)];
     if(l.status==="delivered"){rows.push(info("ส่งมอบให้:",l.deliveredTo));rows.push(info("เมื่อ:",fmtDate(l.deliveredAt)));}
     const docDef={pageSize:"A4",pageMargins:[36,40,36,40],defaultStyle:{font,fontSize:11},content:[
       {text:`ใบรับ-ส่ง ${l.direction==="in"?"(รับเข้า)":"(ส่งออก)"}`,fontSize:17,bold:true,color:"#0f5b55"},
