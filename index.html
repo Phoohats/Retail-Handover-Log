@@ -249,6 +249,13 @@ table.pr-t th{background:#f0e6df}
 /* Firebase note */
 .fb-note{margin:12px 16px;background:var(--bg);border-radius:14px;padding:12px 14px;font-size:11.5px;color:var(--muted);font-weight:300;line-height:1.6;box-shadow:var(--pin)}
 .fb-note b{color:var(--accent-d);font-weight:500}
+
+/* ===== VALIDATION bounce-back (module) ===== */
+.finput.err{box-shadow:var(--pin),0 0 0 2px var(--red)!important;animation:errShake .35s ease}
+.blk-err{outline:2px solid var(--red);outline-offset:3px;border-radius:14px;animation:errShake .35s ease}
+.err-msg{font-size:11.5px;color:var(--red);font-weight:300;margin:-4px 2px 12px;display:flex;gap:5px}
+@keyframes errShake{0%,100%{transform:translateX(0)}25%,75%{transform:translateX(-4px)}50%{transform:translateX(4px)}}
+@media(prefers-reduced-motion:reduce){.finput.err,.blk-err{animation:none}}
 </style>
 
 <!-- Firebase v10 compat SDK (app + auth + firestore + storage) -->
@@ -768,6 +775,7 @@ function setPerson(v){person=v;$("ptIn").className=v==="internal"?"on":"";$("ptE
 function openRecord(id){
   editId=id; const l=id?logs.find(x=>x._id===id):null;
   if(l&&l.status==="delivered"){ toast("🔒 รายการส่งมอบแล้ว แก้ไม่ได้"); return; }
+  setupRecListeners(); clearErr();
   $("recTitle").textContent=l?"แก้ไขรายการ":"บันทึกรายการใหม่";
   $("rProject").value=l?.project||"";
   $("rOccurred").value=isoToLocal(l?.occurredAt);
@@ -825,29 +833,69 @@ function renderItemRows(){
 function addItemRow(){mItems.push({description:"",qty:""});renderItemRows();}
 function rmItemRow(i){mItems.splice(i,1);if(!mItems.length)mItems=[{description:"",qty:""}];renderItemRows();}
 
+// ═══ VALIDATION bounce-back (module) ═══
+function clearErr(){
+  document.querySelectorAll(".finput.err").forEach(e=>e.classList.remove("err"));
+  document.querySelectorAll(".blk-err").forEach(e=>e.classList.remove("blk-err"));
+  document.querySelectorAll(".err-msg").forEach(e=>e.remove());
+}
+function failF(el,msg){
+  if(!el)return toast("⚠️ "+msg);
+  el.classList.add("err");
+  const m=document.createElement("div");m.className="err-msg";m.textContent="⚠ "+msg;
+  el.insertAdjacentElement("afterend",m);
+  el.scrollIntoView({behavior:"smooth",block:"center"});
+  setTimeout(()=>{try{el.focus({preventScroll:true})}catch(e){el.focus()}},160);
+  toast("⚠️ "+msg);
+}
+function failB(el,msg,focusEl){
+  if(!el)return toast("⚠️ "+msg);
+  el.classList.add("blk-err");
+  const m=document.createElement("div");m.className="err-msg";m.textContent="⚠ "+msg;
+  el.insertAdjacentElement("afterend",m);
+  (focusEl||el).scrollIntoView({behavior:"smooth",block:"center"});
+  toast("⚠️ "+msg);
+}
+let recListenersDone=false;
+function setupRecListeners(){
+  if(recListenersDone)return; recListenersDone=true;
+  const s=$("recSheet");
+  s.addEventListener("input",e=>{
+    if(e.target.classList.contains("err")){e.target.classList.remove("err");const n=e.target.nextElementSibling;if(n&&n.classList.contains("err-msg"))n.remove();}
+  });
+  s.addEventListener("click",e=>{
+    const blk=e.target.closest(".seg,.types,.ptoggle,.cam");
+    if(blk&&blk.classList.contains("blk-err")){blk.classList.remove("blk-err");const n=blk.nextElementSibling;if(n&&n.classList.contains("err-msg"))n.remove();}
+  });
+}
+
 async function saveRecord(){
   if(USE_FIREBASE && !navigator.onLine)return toast("📴 ออฟไลน์อยู่ — บันทึกรายการใหม่ไม่ได้ (รูปต้องอัปตอนออนไลน์) ลองใหม่เมื่อมีเน็ต");
+  clearErr();
   const project=$("rProject").value.trim();
-  if(!project)return toast("⚠️ ระบุโครงการ");
-  if(!$("rOccurred").value)return toast("⚠️ ระบุวันเวลาที่รับ-ส่ง");
-  if(!seg)return toast("⚠️ เลือกทิศทาง");
-  if(!type)return toast("⚠️ เลือกประเภทของ");
-  if(type==="other"&&!$("rTypeOther").value.trim())return toast("⚠️ พิมพ์ระบุประเภทของ (อื่นๆ)");
-  if(!mItem.length)return toast("⚠️ ถ่ายรูปพัสดุอย่างน้อย 1 รูป");
-  if(!person)return toast("⚠️ เลือกผู้รับ / ปลายทาง");
+  if(!project)return failF($("rProject"),"ระบุโครงการ");
+  if(!$("rOccurred").value)return failF($("rOccurred"),"ระบุวันเวลาที่รับ-ส่ง");
+  if(!seg)return failB($("segIn").closest(".seg"),"เลือกทิศทาง",$("segIn"));
+  if(!type)return failB($("typeGrid"),"เลือกประเภทของ");
+  if(type==="other"&&!$("rTypeOther").value.trim())return failF($("rTypeOther"),"พิมพ์ระบุประเภทของ (อื่นๆ)");
+  if(!mItem.length)return failB(document.querySelector('.cam[onclick*="itemPhotoInput"]'),"ถ่ายรูปพัสดุอย่างน้อย 1 รูป");
+  if(!person)return failB($("ptIn").closest(".ptoggle"),"เลือกผู้รับ / ปลายทาง",$("ptIn"));
   let inName="",inSur="",inPhone="",inDept="",exName="";
   if(person==="internal"){
     inName=$("rInName").value.trim();inSur=$("rInSurname").value.trim();
     inPhone=$("rInPhone").value.trim();inDept=$("rInDept").value.trim();
-    if(!inName||!inSur||!inPhone||!inDept)return toast("⚠️ กรอกชื่อ/นามสกุล/เบอร์/แผนกให้ครบ");
+    if(!inName||!inSur||!inPhone||!inDept){
+      const fe=["rInName","rInSurname","rInPhone","rInDept"].map(id=>$(id)).find(el=>!el.value.trim());
+      return failF(fe,"กรอกชื่อ/นามสกุล/เบอร์/แผนกให้ครบ");
+    }
   }else{
     exName=$("rExName").value.trim();
-    if(!mId.length)return toast("⚠️ แนบรูปบัตรประชาชนอย่างน้อย 1 รูป");
+    if(!mId.length)return failB(document.querySelector('.cam[onclick*="idPhotoInput"]'),"แนบรูปบัตรประชาชนอย่างน้อย 1 รูป");
   }
   const items=mItems.filter(i=>i.description&&i.description.trim());
-  if(!items.length)return toast("⚠️ ระบุรายการของอย่างน้อย 1 รายการ");
+  if(!items.length)return failB($("itemRows"),"ระบุรายการของอย่างน้อย 1 รายการ");
   const recordedBy=$("rRecordedBy").value.trim();
-  if(!recordedBy)return toast("⚠️ ระบุผู้บันทึก");
+  if(!recordedBy)return failF($("rRecordedBy"),"ระบุผู้บันทึก");
 
   const btn=$("recSaveBtn"); btn.disabled=true; btn.textContent="กำลังบันทึก...";
   try{
