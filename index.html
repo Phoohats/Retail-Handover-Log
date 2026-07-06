@@ -249,6 +249,13 @@ table.pr-t th{background:#f0e6df}
 /* Firebase note */
 .fb-note{margin:12px 16px;background:var(--bg);border-radius:14px;padding:12px 14px;font-size:11.5px;color:var(--muted);font-weight:300;line-height:1.6;box-shadow:var(--pin)}
 .fb-note b{color:var(--accent-d);font-weight:500}
+
+/* ===== VALIDATION bounce-back (module) ===== */
+.finput.err{box-shadow:var(--pin),0 0 0 2px var(--red)!important;animation:errShake .35s ease}
+.blk-err{outline:2px solid var(--red);outline-offset:3px;border-radius:14px;animation:errShake .35s ease}
+.err-msg{font-size:11.5px;color:var(--red);font-weight:300;margin:-4px 2px 12px;display:flex;gap:5px}
+@keyframes errShake{0%,100%{transform:translateX(0)}25%,75%{transform:translateX(-4px)}50%{transform:translateX(4px)}}
+@media(prefers-reduced-motion:reduce){.finput.err,.blk-err{animation:none}}
 </style>
 
 <!-- Firebase v10 compat SDK (app + auth + firestore + storage) -->
@@ -554,6 +561,7 @@ const USE_FIREBASE = (FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY");
 const COLLECTION = "parcelLog";
 const LOCAL_KEY  = "handoverLog_v2";
 const RECBY_KEY  = "handover_lastRecordedBy";
+const DRAFT_KEY  = "handover_draft_v2_new";
 
 const SEED_PROJECTS = [
   "IDEO Verve Ratchaprarop","Somerset Rama 9","Ashton Asoke-Rama 9",
@@ -757,7 +765,10 @@ function render(){
 
 // ━━━ sheets ━━━
 function openSheet(id){$(id).classList.add("open");}
-function closeSheet(id){$(id).classList.remove("open"); if(id==="expSheet")syncNav(tab);}
+function closeSheet(id){
+  if(id==="recSheet" && editId===null) saveDraftNow();   // preserve in-progress new record on close/cancel
+  $(id).classList.remove("open"); if(id==="expSheet")syncNav(tab);
+}
 
 // ━━━ RECORD modal ━━━
 function setSeg(v){seg=v;$("segIn").className=v==="in"?"on-in":"";$("segOut").className=v==="out"?"on-out":"";}
@@ -768,6 +779,7 @@ function setPerson(v){person=v;$("ptIn").className=v==="internal"?"on":"";$("ptE
 function openRecord(id){
   editId=id; const l=id?logs.find(x=>x._id===id):null;
   if(l&&l.status==="delivered"){ toast("🔒 รายการส่งมอบแล้ว แก้ไม่ได้"); return; }
+  setupRecListeners(); clearErr();
   $("recTitle").textContent=l?"แก้ไขรายการ":"บันทึกรายการใหม่";
   $("rProject").value=l?.project||"";
   $("rOccurred").value=isoToLocal(l?.occurredAt);
@@ -785,6 +797,7 @@ function openRecord(id){
   mItems=l?.items?JSON.parse(JSON.stringify(l.items)):[{description:"",qty:""}];
   if(!mItems.length)mItems=[{description:"",qty:""}];
   renderItemRows();
+  if(!id) restoreDraft();   // new record: repopulate autosaved draft (text only)
   openSheet("recSheet");
   sigRec=makeSigPad($("sigPadRec"));   // sync init (เหมือน deliver pad)
   const rn=$("recSigNote");
@@ -822,32 +835,113 @@ function renderItemRows(){
     <input class="qty" placeholder="จำนวน" value="${esc(it.qty)}" oninput="mItems[${i}].qty=this.value">
     <button onclick="rmItemRow(${i})">✕</button></div>`).join("");
 }
-function addItemRow(){mItems.push({description:"",qty:""});renderItemRows();}
-function rmItemRow(i){mItems.splice(i,1);if(!mItems.length)mItems=[{description:"",qty:""}];renderItemRows();}
+function addItemRow(){mItems.push({description:"",qty:""});renderItemRows();scheduleDraft();}
+function rmItemRow(i){mItems.splice(i,1);if(!mItems.length)mItems=[{description:"",qty:""}];renderItemRows();scheduleDraft();}
+
+// ═══ VALIDATION bounce-back (module) ═══
+function clearErr(){
+  document.querySelectorAll(".finput.err").forEach(e=>e.classList.remove("err"));
+  document.querySelectorAll(".blk-err").forEach(e=>e.classList.remove("blk-err"));
+  document.querySelectorAll(".err-msg").forEach(e=>e.remove());
+}
+function failF(el,msg){
+  if(!el)return toast("⚠️ "+msg);
+  el.classList.add("err");
+  const m=document.createElement("div");m.className="err-msg";m.textContent="⚠ "+msg;
+  el.insertAdjacentElement("afterend",m);
+  el.scrollIntoView({behavior:"smooth",block:"center"});
+  setTimeout(()=>{try{el.focus({preventScroll:true})}catch(e){el.focus()}},160);
+  toast("⚠️ "+msg);
+}
+function failB(el,msg,focusEl){
+  if(!el)return toast("⚠️ "+msg);
+  el.classList.add("blk-err");
+  const m=document.createElement("div");m.className="err-msg";m.textContent="⚠ "+msg;
+  el.insertAdjacentElement("afterend",m);
+  (focusEl||el).scrollIntoView({behavior:"smooth",block:"center"});
+  toast("⚠️ "+msg);
+}
+let recListenersDone=false;
+function setupRecListeners(){
+  if(recListenersDone)return; recListenersDone=true;
+  const s=$("recSheet");
+  s.addEventListener("input",e=>{
+    if(e.target.classList.contains("err")){e.target.classList.remove("err");const n=e.target.nextElementSibling;if(n&&n.classList.contains("err-msg"))n.remove();}
+    scheduleDraft();
+  });
+  s.addEventListener("click",e=>{
+    const blk=e.target.closest(".seg,.types,.ptoggle,.cam");
+    if(blk&&blk.classList.contains("blk-err")){blk.classList.remove("blk-err");const n=blk.nextElementSibling;if(n&&n.classList.contains("err-msg"))n.remove();}
+    if(e.target.closest(".seg,.types,.ptoggle")) scheduleDraft();
+  });
+}
+
+// ═══ AUTOSAVE DRAFT — new records only, NO photos (PDPA) (module) ═══
+let draftTimer=null;
+function collectDraft(){
+  const v=id=>($(id).value||"");
+  return {project:v("rProject"),occurred:v("rOccurred"),typeOther:v("rTypeOther"),source:v("rSource"),
+    inName:v("rInName"),inSurname:v("rInSurname"),inPhone:v("rInPhone"),inDept:v("rInDept"),
+    exName:v("rExName"),notes:v("rNotes"),recordedBy:v("rRecordedBy"),
+    seg,type,person,items:mItems,savedAt:Date.now()};
+}
+function scheduleDraft(){ if(editId!==null)return; clearTimeout(draftTimer); draftTimer=setTimeout(saveDraftNow,400); }
+function saveDraftNow(){
+  if(editId!==null)return;
+  const d=collectDraft();
+  // occurred + recordedBy are auto-filled → exclude from the "has content" test
+  const has=d.project||d.typeOther||d.source||d.inName||d.inSurname||d.inPhone||d.inDept
+    ||d.exName||d.notes||d.seg||d.type||d.person||(d.items||[]).some(i=>i.description&&i.description.trim());
+  if(!has){clearDraft();return;}
+  try{localStorage.setItem(DRAFT_KEY,JSON.stringify(d));}catch(e){}
+}
+function clearDraft(){ clearTimeout(draftTimer); try{localStorage.removeItem(DRAFT_KEY);}catch(e){} }
+function restoreDraft(){
+  if(editId!==null)return;
+  let d=null;try{d=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null");}catch(e){}
+  if(!d)return;
+  $("rProject").value=d.project||"";
+  if(d.occurred)$("rOccurred").value=d.occurred;
+  setSeg(d.seg||""); setType(d.type||""); setPerson(d.person||"");
+  $("rTypeOther").value=d.typeOther||"";
+  $("rSource").value=d.source||"";
+  $("rInName").value=d.inName||"";$("rInSurname").value=d.inSurname||"";
+  $("rInPhone").value=d.inPhone||"";$("rInDept").value=d.inDept||"";
+  $("rExName").value=d.exName||"";
+  $("rNotes").value=d.notes||"";
+  $("rRecordedBy").value=d.recordedBy||"";
+  mItems=Array.isArray(d.items)&&d.items.length?JSON.parse(JSON.stringify(d.items)):[{description:"",qty:""}];
+  renderItemRows();
+  toast("📝 กู้ข้อมูลร่างที่กรอกค้างไว้");
+}
 
 async function saveRecord(){
   if(USE_FIREBASE && !navigator.onLine)return toast("📴 ออฟไลน์อยู่ — บันทึกรายการใหม่ไม่ได้ (รูปต้องอัปตอนออนไลน์) ลองใหม่เมื่อมีเน็ต");
+  clearErr();
   const project=$("rProject").value.trim();
-  if(!project)return toast("⚠️ ระบุโครงการ");
-  if(!$("rOccurred").value)return toast("⚠️ ระบุวันเวลาที่รับ-ส่ง");
-  if(!seg)return toast("⚠️ เลือกทิศทาง");
-  if(!type)return toast("⚠️ เลือกประเภทของ");
-  if(type==="other"&&!$("rTypeOther").value.trim())return toast("⚠️ พิมพ์ระบุประเภทของ (อื่นๆ)");
-  if(!mItem.length)return toast("⚠️ ถ่ายรูปพัสดุอย่างน้อย 1 รูป");
-  if(!person)return toast("⚠️ เลือกผู้รับ / ปลายทาง");
+  if(!project)return failF($("rProject"),"ระบุโครงการ");
+  if(!$("rOccurred").value)return failF($("rOccurred"),"ระบุวันเวลาที่รับ-ส่ง");
+  if(!seg)return failB($("segIn").closest(".seg"),"เลือกทิศทาง",$("segIn"));
+  if(!type)return failB($("typeGrid"),"เลือกประเภทของ");
+  if(type==="other"&&!$("rTypeOther").value.trim())return failF($("rTypeOther"),"พิมพ์ระบุประเภทของ (อื่นๆ)");
+  if(!mItem.length)return failB(document.querySelector('.cam[onclick*="itemPhotoInput"]'),"ถ่ายรูปพัสดุอย่างน้อย 1 รูป");
+  if(!person)return failB($("ptIn").closest(".ptoggle"),"เลือกผู้รับ / ปลายทาง",$("ptIn"));
   let inName="",inSur="",inPhone="",inDept="",exName="";
   if(person==="internal"){
     inName=$("rInName").value.trim();inSur=$("rInSurname").value.trim();
     inPhone=$("rInPhone").value.trim();inDept=$("rInDept").value.trim();
-    if(!inName||!inSur||!inPhone||!inDept)return toast("⚠️ กรอกชื่อ/นามสกุล/เบอร์/แผนกให้ครบ");
+    if(!inName||!inSur||!inPhone||!inDept){
+      const fe=["rInName","rInSurname","rInPhone","rInDept"].map(id=>$(id)).find(el=>!el.value.trim());
+      return failF(fe,"กรอกชื่อ/นามสกุล/เบอร์/แผนกให้ครบ");
+    }
   }else{
     exName=$("rExName").value.trim();
-    if(!mId.length)return toast("⚠️ แนบรูปบัตรประชาชนอย่างน้อย 1 รูป");
+    if(!mId.length)return failB(document.querySelector('.cam[onclick*="idPhotoInput"]'),"แนบรูปบัตรประชาชนอย่างน้อย 1 รูป");
   }
   const items=mItems.filter(i=>i.description&&i.description.trim());
-  if(!items.length)return toast("⚠️ ระบุรายการของอย่างน้อย 1 รายการ");
+  if(!items.length)return failB($("itemRows"),"ระบุรายการของอย่างน้อย 1 รายการ");
   const recordedBy=$("rRecordedBy").value.trim();
-  if(!recordedBy)return toast("⚠️ ระบุผู้บันทึก");
+  if(!recordedBy)return failF($("rRecordedBy"),"ระบุผู้บันทึก");
 
   const btn=$("recSaveBtn"); btn.disabled=true; btn.textContent="กำลังบันทึก...";
   try{
@@ -884,7 +978,7 @@ async function saveRecord(){
       saveLocal();
     }
     localStorage.setItem(RECBY_KEY,recordedBy);
-    closeSheet("recSheet"); refreshProjects(); render();
+    closeSheet("recSheet"); if(!editId)clearDraft(); refreshProjects(); render();
     toast(editId?"✅ แก้ไขแล้ว":"✅ บันทึกรายการใหม่แล้ว");
   }catch(e){ console.error("save failed",e); toast("❌ บันทึกไม่สำเร็จ: "+(e.message||e)); }
   finally{ btn.disabled=false; btn.textContent="บันทึกรายการ"; }
