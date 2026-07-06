@@ -561,6 +561,7 @@ const USE_FIREBASE = (FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY");
 const COLLECTION = "parcelLog";
 const LOCAL_KEY  = "handoverLog_v2";
 const RECBY_KEY  = "handover_lastRecordedBy";
+const DRAFT_KEY  = "handover_draft_v2_new";
 
 const SEED_PROJECTS = [
   "IDEO Verve Ratchaprarop","Somerset Rama 9","Ashton Asoke-Rama 9",
@@ -764,7 +765,10 @@ function render(){
 
 // ━━━ sheets ━━━
 function openSheet(id){$(id).classList.add("open");}
-function closeSheet(id){$(id).classList.remove("open"); if(id==="expSheet")syncNav(tab);}
+function closeSheet(id){
+  if(id==="recSheet" && editId===null) saveDraftNow();   // preserve in-progress new record on close/cancel
+  $(id).classList.remove("open"); if(id==="expSheet")syncNav(tab);
+}
 
 // ━━━ RECORD modal ━━━
 function setSeg(v){seg=v;$("segIn").className=v==="in"?"on-in":"";$("segOut").className=v==="out"?"on-out":"";}
@@ -793,6 +797,7 @@ function openRecord(id){
   mItems=l?.items?JSON.parse(JSON.stringify(l.items)):[{description:"",qty:""}];
   if(!mItems.length)mItems=[{description:"",qty:""}];
   renderItemRows();
+  if(!id) restoreDraft();   // new record: repopulate autosaved draft (text only)
   openSheet("recSheet");
   sigRec=makeSigPad($("sigPadRec"));   // sync init (เหมือน deliver pad)
   const rn=$("recSigNote");
@@ -830,8 +835,8 @@ function renderItemRows(){
     <input class="qty" placeholder="จำนวน" value="${esc(it.qty)}" oninput="mItems[${i}].qty=this.value">
     <button onclick="rmItemRow(${i})">✕</button></div>`).join("");
 }
-function addItemRow(){mItems.push({description:"",qty:""});renderItemRows();}
-function rmItemRow(i){mItems.splice(i,1);if(!mItems.length)mItems=[{description:"",qty:""}];renderItemRows();}
+function addItemRow(){mItems.push({description:"",qty:""});renderItemRows();scheduleDraft();}
+function rmItemRow(i){mItems.splice(i,1);if(!mItems.length)mItems=[{description:"",qty:""}];renderItemRows();scheduleDraft();}
 
 // ═══ VALIDATION bounce-back (module) ═══
 function clearErr(){
@@ -862,11 +867,52 @@ function setupRecListeners(){
   const s=$("recSheet");
   s.addEventListener("input",e=>{
     if(e.target.classList.contains("err")){e.target.classList.remove("err");const n=e.target.nextElementSibling;if(n&&n.classList.contains("err-msg"))n.remove();}
+    scheduleDraft();
   });
   s.addEventListener("click",e=>{
     const blk=e.target.closest(".seg,.types,.ptoggle,.cam");
     if(blk&&blk.classList.contains("blk-err")){blk.classList.remove("blk-err");const n=blk.nextElementSibling;if(n&&n.classList.contains("err-msg"))n.remove();}
+    if(e.target.closest(".seg,.types,.ptoggle")) scheduleDraft();
   });
+}
+
+// ═══ AUTOSAVE DRAFT — new records only, NO photos (PDPA) (module) ═══
+let draftTimer=null;
+function collectDraft(){
+  const v=id=>($(id).value||"");
+  return {project:v("rProject"),occurred:v("rOccurred"),typeOther:v("rTypeOther"),source:v("rSource"),
+    inName:v("rInName"),inSurname:v("rInSurname"),inPhone:v("rInPhone"),inDept:v("rInDept"),
+    exName:v("rExName"),notes:v("rNotes"),recordedBy:v("rRecordedBy"),
+    seg,type,person,items:mItems,savedAt:Date.now()};
+}
+function scheduleDraft(){ if(editId!==null)return; clearTimeout(draftTimer); draftTimer=setTimeout(saveDraftNow,400); }
+function saveDraftNow(){
+  if(editId!==null)return;
+  const d=collectDraft();
+  // occurred + recordedBy are auto-filled → exclude from the "has content" test
+  const has=d.project||d.typeOther||d.source||d.inName||d.inSurname||d.inPhone||d.inDept
+    ||d.exName||d.notes||d.seg||d.type||d.person||(d.items||[]).some(i=>i.description&&i.description.trim());
+  if(!has){clearDraft();return;}
+  try{localStorage.setItem(DRAFT_KEY,JSON.stringify(d));}catch(e){}
+}
+function clearDraft(){ clearTimeout(draftTimer); try{localStorage.removeItem(DRAFT_KEY);}catch(e){} }
+function restoreDraft(){
+  if(editId!==null)return;
+  let d=null;try{d=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null");}catch(e){}
+  if(!d)return;
+  $("rProject").value=d.project||"";
+  if(d.occurred)$("rOccurred").value=d.occurred;
+  setSeg(d.seg||""); setType(d.type||""); setPerson(d.person||"");
+  $("rTypeOther").value=d.typeOther||"";
+  $("rSource").value=d.source||"";
+  $("rInName").value=d.inName||"";$("rInSurname").value=d.inSurname||"";
+  $("rInPhone").value=d.inPhone||"";$("rInDept").value=d.inDept||"";
+  $("rExName").value=d.exName||"";
+  $("rNotes").value=d.notes||"";
+  $("rRecordedBy").value=d.recordedBy||"";
+  mItems=Array.isArray(d.items)&&d.items.length?JSON.parse(JSON.stringify(d.items)):[{description:"",qty:""}];
+  renderItemRows();
+  toast("📝 กู้ข้อมูลร่างที่กรอกค้างไว้");
 }
 
 async function saveRecord(){
@@ -932,7 +978,7 @@ async function saveRecord(){
       saveLocal();
     }
     localStorage.setItem(RECBY_KEY,recordedBy);
-    closeSheet("recSheet"); refreshProjects(); render();
+    closeSheet("recSheet"); if(!editId)clearDraft(); refreshProjects(); render();
     toast(editId?"✅ แก้ไขแล้ว":"✅ บันทึกรายการใหม่แล้ว");
   }catch(e){ console.error("save failed",e); toast("❌ บันทึกไม่สำเร็จ: "+(e.message||e)); }
   finally{ btn.disabled=false; btn.textContent="บันทึกรายการ"; }
