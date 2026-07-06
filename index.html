@@ -60,6 +60,21 @@ h1,h2,h3{font-family:'Prompt',sans-serif;font-weight:500}
 .sync{font-size:10px;font-weight:400;padding:5px 11px;border-radius:99px;white-space:nowrap;display:flex;align-items:center;gap:4px}
 .sync.on{background:var(--ok-bg);color:var(--ok)}
 .sync.off{background:var(--wait-bg);color:var(--wait)}
+.help-btn{border:none;border-radius:99px;background:var(--bg);color:var(--accent-d);font-family:inherit;font-size:11.5px;font-weight:400;padding:6px 12px;min-height:32px;cursor:pointer;box-shadow:var(--sh-sm)}
+.help-btn:active{box-shadow:var(--pin)}
+/* ===== GUIDE ===== */
+.guide-intro{font-size:13.5px;color:var(--ink);font-weight:300;background:var(--bg);border-radius:14px;padding:12px 14px;box-shadow:var(--pin);line-height:1.6}
+.guide-sec{margin-top:18px}
+.guide-sec>h3{font-size:14.5px;font-weight:500;color:var(--accent-d);margin:0 2px 10px;display:flex;align-items:center;gap:7px}
+.guide-step{display:flex;gap:12px;align-items:flex-start;margin-bottom:11px}
+.guide-step .n{flex:0 0 28px;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh-sm)}
+.guide-step .t{font-size:13.5px;color:var(--ink);font-weight:300;line-height:1.55;padding-top:3px}
+.guide-step .t b{font-weight:500;color:var(--ink)}
+.guide-tip{display:flex;gap:9px;font-size:12.5px;color:var(--ink);font-weight:300;line-height:1.55;margin-bottom:9px}
+.guide-tip .e{flex:0 0 auto}
+.guide-nav{display:flex;flex-direction:column;gap:8px;background:var(--bg);border-radius:14px;padding:12px 14px;box-shadow:var(--pin)}
+.guide-nav div{font-size:12.5px;color:var(--ink);font-weight:300}
+.guide-nav b{font-weight:500;color:var(--accent-d)}
 .proj-pick{margin-top:16px;background:var(--bg);border-radius:16px;padding:0 8px;display:flex;align-items:center;box-shadow:var(--sh-sm)}
 .proj-pick span{padding:0 6px;color:var(--accent-d)}
 .proj-pick select{flex:1;border:none;background:transparent;min-height:48px;font-size:14px;color:var(--ink);outline:none;font-family:inherit}
@@ -268,7 +283,10 @@ table.pr-t th{background:#f0e6df}
         <h1>รับ-ส่งของ 🧡</h1>
         <p>บันทึกง่าย ๆ ทุกโครงการ</p>
       </div>
-      <div class="sync" id="syncBadge"></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <div class="sync" id="syncBadge"></div>
+        <button class="help-btn" onclick="openSheet('guideSheet')">❓ วิธีใช้</button>
+      </div>
     </div>
     <div class="proj-pick">
       <span>📍</span>
@@ -468,6 +486,52 @@ table.pr-t th{background:#f0e6df}
   </div>
 </div>
 
+<!-- ===== GUIDE SHEET ===== -->
+<div class="sheet" id="guideSheet">
+  <div class="sheet-box">
+    <div class="sheet-head">
+      <button class="back" onclick="closeSheet('guideSheet')">‹</button>
+      <h2>วิธีใช้งาน 📖</h2>
+    </div>
+    <div class="sheet-body">
+      <div class="guide-intro">แอปนี้ใช้บันทึก <b>การรับ-ส่งพัสดุ / เอกสาร / กุญแจ</b> ระหว่างโครงการ — ของเข้ามา เราถือไว้ แล้วส่งมอบให้ปลายทาง พร้อมรูป + ลายเซ็นเป็นหลักฐาน</div>
+
+      <div class="guide-sec"><h3>📝 บันทึกรายการใหม่</h3>
+        <div class="guide-step"><span class="n">1</span><span class="t">กด <b>＋ บันทึก</b> (ปุ่มกลางล่าง) เลือก <b>โครงการ</b> + วันเวลา</span></div>
+        <div class="guide-step"><span class="n">2</span><span class="t">เลือก <b>ทิศทาง</b> (รับเข้า/ส่งออก) และ <b>ประเภทของ</b> — ถ้าไม่มีในลิสต์ กด <b>✏️ อื่นๆ</b> พิมพ์เองได้</span></div>
+        <div class="guide-step"><span class="n">3</span><span class="t"><b>ถ่ายรูปของ</b> (บังคับ) — แตะกล่องกล้อง ถ่ายได้เลย</span></div>
+        <div class="guide-step"><span class="n">4</span><span class="t">ใส่ <b>รับมาจาก/ต้นทาง</b> (ถ้ามี) และ <b>ผู้รับ/ปลายทาง</b> = ของชิ้นนี้จะส่งให้ใคร (คนใน=กรอกชื่อ/เบอร์ · คนนอก=ถ่ายรูปบัตร)</span></div>
+        <div class="guide-step"><span class="n">5</span><span class="t">กด <b>บันทึกรายการ</b> — เสร็จ! รายการจะขึ้นสถานะ <b>"ค้างอยู่"</b></span></div>
+      </div>
+
+      <div class="guide-sec"><h3>📤 ส่งมอบให้ปลายทาง</h3>
+        <div class="guide-step"><span class="n">1</span><span class="t">พอปลายทางมารับของ กด <b>📤 ส่งมอบให้ปลายทาง</b> บนการ์ด</span></div>
+        <div class="guide-step"><span class="n">2</span><span class="t">กรอก <b>ชื่อ + เบอร์ผู้รับ</b> แล้วให้เขา <b>เซ็นชื่อ</b> บนจอ</span></div>
+        <div class="guide-step"><span class="n">3</span><span class="t">กดยืนยัน — รายการจะ <b>ล็อก 🔒</b> แก้ไม่ได้ (เก็บเป็นหลักฐาน)</span></div>
+      </div>
+
+      <div class="guide-sec"><h3>🧭 เมนูด้านล่าง</h3>
+        <div class="guide-nav">
+          <div><b>📋 ทั้งหมด</b> — ดูทุกรายการ</div>
+          <div><b>⏳ ค้างอยู่</b> — ยังไม่ส่งมอบ</div>
+          <div><b>＋ บันทึก</b> — เพิ่มรายการใหม่</div>
+          <div><b>✅ ส่งมอบ</b> — ที่ส่งมอบแล้ว</div>
+          <div><b>📤 รายงาน</b> — ออก Excel / PDF</div>
+        </div>
+      </div>
+
+      <div class="guide-sec"><h3>💡 เคล็ดลับ</h3>
+        <div class="guide-tip"><span class="e">🔍</span><span>ใช้ชิป/ตัวกรองด้านบนหารายการตามทิศทาง วันที่ หรือพิมพ์ค้นหาชื่อได้</span></div>
+        <div class="guide-tip"><span class="e">🖨️</span><span>เปิดรายการ → กด "พิมพ์ใบรับ-ส่ง" ได้ใบ PDF มีรูป+ลายเซ็น แชร์เข้า LINE ได้</span></div>
+        <div class="guide-tip"><span class="e">📶</span><span>ตอนถ่ายรูป/บันทึก ต้องออนไลน์ (รูปอัปขึ้นคลาวด์)</span></div>
+        <div class="guide-tip"><span class="e">🔒</span><span>รูปบัตรประชาชนเก็บปลอดภัย เข้าถึงเฉพาะผ่านแอปเท่านั้น</span></div>
+      </div>
+
+      <button class="fsave" onclick="closeSheet('guideSheet')">เข้าใจแล้ว เริ่มใช้งาน 🧡</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <div id="printArea"></div>
 
@@ -530,7 +594,9 @@ function imgSrc(p){return p? (p.url||p.dataUrl||"") : "";}
 function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove("show"),2400);}
 
 // ━━━ passcode gate ━━━
-function gateOK(){ $("gate").style.display="none"; $("app").style.display=""; $("nav").style.display=""; init(); }
+function gateOK(){ $("gate").style.display="none"; $("app").style.display=""; $("nav").style.display=""; init();
+  if(!localStorage.getItem("handover_seen_guide")){ localStorage.setItem("handover_seen_guide","1"); setTimeout(()=>openSheet("guideSheet"),600); }  // โชว์วิธีใช้ครั้งแรกครั้งเดียว
+}
 function checkPasscode(){
   const v=$("gateInput").value.trim();
   if(v===PASSCODE){ sessionStorage.setItem("handover_gate","1"); gateOK(); }
